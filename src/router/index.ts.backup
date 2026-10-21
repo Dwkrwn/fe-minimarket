@@ -1,0 +1,1429 @@
+
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import Layout from '@/components/Layout.vue'
+import Dashboard from '@/views/dashboard/Dashboard.vue'
+import Notifikasi from '@/views/notifikasi/notifikasi.vue'
+import NotifikasiDetail from '@/views/notifikasi/item/NotifikasItemDetail.vue'
+import NotifikasiPRDetail from '@/views/notifikasi/pr/NotifikasiPRDetail.vue'
+import NotifikasiPODetail from '@/views/notifikasi/po/NotifikasiPODetail.vue'
+import Login from '@/views/login/login.vue'
+import Documentation from '@/views/document.vue'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    // ============================================================================
+    // PUBLIC ROUTES (No Authentication Required)
+    // ============================================================================
+    {
+      path: '/docs',
+      name: 'Documentation',
+      component: Documentation,
+      meta: { 
+        title: 'Documentation',
+        requiresAuth: false 
+      },
+    },
+    {
+      path: '/login',
+      name: 'Login',
+      component: Login,
+      meta: { 
+        title: 'Login',
+        requiresAuth: false 
+      },
+    },
+    {
+      path: '/',
+      component: Layout,
+      meta: { requiresAuth: true },
+      children: [
+        // ============================================================================
+        // ROOT ROUTES DO NOT REMOVE
+        // ============================================================================
+        {
+          path: '',
+          name: 'Dashboard',
+          component: Dashboard,
+          meta: { 
+            title: 'Dashboard',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/notifikasi',
+          name: 'Notifikasi',
+          component: Notifikasi,
+          meta: { 
+            title: 'Notifikasi',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/notifikasi/:id',
+          name: 'NotifikasiItemDetail',
+          component: NotifikasiDetail,
+          meta: { 
+            title: 'Notifikasi Detail',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+        {
+          path: '/notifikasi/purchase-request/:id',
+          name: 'NotifikasiPRDetail',
+          component: NotifikasiPRDetail,
+          meta: { 
+            title: 'Notifikasi Purchase Request',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+        {
+          path: '/notifikasi/stock_opname/:id',
+          name: 'NotifikasiStockOpnameDetail',
+          component: () => import('@/views/notifikasi/NotifikasiStockOpnameDetail.vue'),
+          meta: { 
+            title: 'Notifikasi StockOpname',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+        {
+          path: '/notifikasi/stock_adj/:id',
+          name: 'NotifikasiStockAdjDetail',
+          component: () => import('@/views/notifikasi/NotifikasiStockAdjDetail.vue'),
+          meta: { 
+            title: 'Notifikasi StockAdj',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+        {
+          path: '/notifikasi/purchase-order/:id',
+          name: 'NotifikasiPODetail',
+          component: NotifikasiPODetail,
+          meta: { 
+            title: 'Notifikasi Purchase Order',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+        {
+          path: '/notifikasi/purchase_invoice/:id',
+          name: 'NotifikasiPIDetail',
+          component: () => import('@/views/notifikasi/pi/NotifikasiPIDetail.vue'),
+          meta: { 
+            title: 'Notifikasi Purchase Invoice',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+
+        {
+          path: '/notifikasi/purchase_order_close/:id',
+          name: 'NotifikasiTPurchaseOrderCloseDetail',
+          component: () => import('@/views/notifikasi/purchase_order_close/NotifikasiTPurchaseOrderCloseDetail.vue'),
+          meta: { 
+            title: 'Notifikasi TPurchaseOrderClose',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+
+        {
+          path: '/notifikasi/purchase_request_close/:id',
+          name: 'NotifikasiTPurchaseRequestCloseDetail',
+          component: () => import('@/views/notifikasi/purchase_request_close/NotifikasiTPurchaseRequestCloseDetail.vue'),
+          meta: { 
+            title: 'Notifikasi Purchase Request Close',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+
+        {
+          path: '/notifikasi/purchase-return/:id',
+          name: 'NotifikasiPReturnDetail',
+          component: () => import('@/views/notifikasi/purchase_retrun/NotifikasiPReturnDetail.vue'),
+          meta: { 
+            title: 'Notifikasi Purchase Return',
+            requiresAuth: true,
+            activePath: '/notifikasi'
+          },
+        },
+
+        {
+          path: '/setup/menu',
+          name: 'Menu',
+          component: () => import('@/views/setup/menu/MenuLanding.vue'),
+          meta: { 
+            title: 'Master Menu',
+            requiresAuth: true,
+            requiresSuperAdmin: true // Only SUPER ADMIN can access
+          },
+        },
+        {
+          path: '/setup/menu/form/:id?',
+          name: 'MenuForm',
+          component: () => import('@/views/setup/menu/MenuForm.vue'),
+          meta: { 
+            title: 'Form Menu',
+            requiresAuth: true,
+            requiresSuperAdmin: true // Only SUPER ADMIN can access
+          },
+        },
+        {
+          path: '/setup/menu/view/:id',
+          name: 'MenuView',
+          component: () => import('@/views/setup/menu/MenuForm.vue'),
+          meta: { 
+            title: 'Detail Menu',
+            requiresAuth: true,
+            requiresSuperAdmin: true, // Only SUPER ADMIN can access
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END OF ROOT ROUTES DO NOT REMOVE
+        // ============================================================================
+        
+
+       // ============================================================================
+        // AUTO GENERATED SECTION 
+        // ============================================================================
+        // ============================================================================
+        // ROUTE: /purchasing/master/m_price_list
+        // ============================================================================
+        {
+          path: '/purchasing/master/m_price_list',
+          name: 'PriceList',
+          component: () => import('@/views/purchasing/master/m_price_list/PriceList.vue'),
+          meta: {
+            title: 'Master Price List',
+            requiresAuth: true
+          },
+        },
+        // ============================================================================
+        // ROUTE: /setup/m_general
+        // ============================================================================
+        {
+          path: '/setup/m_general',
+          name: 'General',
+          component: () => import('@/views/setup/m_general/GeneralLanding.vue'),
+          meta: { 
+            title: 'Master General',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_general/form/:id?',
+          name: 'GeneralForm',
+          component: () => import('@/views/setup/m_general/GeneralForm.vue'),
+          meta: { 
+            title: 'Form General',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_general/view/:id',
+          name: 'GeneralView',
+          component: () => import('@/views/setup/m_general/GeneralForm.vue'),
+          meta: { 
+            title: 'Detail General',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_general
+        // ============================================================================
+
+       
+
+        // ============================================================================
+        // ROUTE: /dev/component
+        // ============================================================================
+        {
+          path: '/dev/component',
+          name: 'Component',
+          component: () => import('@/views/dev/component/ComponentLanding.vue'),
+          meta: { 
+            title: 'Component Showcase',
+            requiresAuth: true 
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /dev/component
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/user_default
+        // ============================================================================
+        {
+          path: '/setup/user_default',
+          name: 'UserDefault',
+          component: () => import('@/views/setup/user_default/UserDefaultLanding.vue'),
+          meta: { 
+            title: 'Master UserDefault',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/user_default/form/:id?',
+          name: 'UserDefaultForm',
+          component: () => import('@/views/setup/user_default/UserDefaultForm.vue'),
+          meta: { 
+            title: 'Form UserDefault',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/user_default/view/:id',
+          name: 'UserDefaultView',
+          component: () => import('@/views/setup/user_default/UserDefaultForm.vue'),
+          meta: { 
+            title: 'Detail UserDefault',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/user_default
+        // ============================================================================
+
+        // ============================================================================
+        // 404 NOT FOUND - CATCH ALL ROUTE (MUST BE LAST IN CHILDREN)
+        // ============================================================================
+        {
+          path: '/:pathMatch(.*)*',
+          name: 'NotFound',
+          component: () => import('@/views/NotFound.vue'),
+          meta: { 
+            title: '404 - Halaman Tidak Ditemukan',
+            requiresAuth: true 
+          },
+        },
+
+        // ============================================================================
+        // ROUTE: /setup/m_unit_bisnis
+        // ============================================================================
+        {
+          path: '/setup/m_unit_bisnis',
+          name: 'UnitBisnis',
+          component: () => import('@/views/setup/m_unit_bisnis/UnitBisnisLanding.vue'),
+          meta: { 
+            title: 'Master UnitBisnis',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_unit_bisnis/form/:id?',
+          name: 'UnitBisnisForm',
+          component: () => import('@/views/setup/m_unit_bisnis/UnitBisnisForm.vue'),
+          meta: { 
+            title: 'Form UnitBisnis',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_unit_bisnis/view/:id',
+          name: 'UnitBisnisView',
+          component: () => import('@/views/setup/m_unit_bisnis/UnitBisnisForm.vue'),
+          meta: { 
+            title: 'Detail UnitBisnis',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_unit_bisnis
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_prefix
+        // ============================================================================
+        {
+          path: '/setup/m_prefix',
+          name: 'Prefix',
+          component: () => import('@/views/setup/m_prefix/PrefixLanding.vue'),
+          meta: { 
+            title: 'Master Prefix',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_prefix/form/:id?',
+          name: 'PrefixForm',
+          component: () => import('@/views/setup/m_prefix/PrefixForm.vue'),
+          meta: { 
+            title: 'Form Prefix',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_prefix/view/:id',
+          name: 'PrefixView',
+          component: () => import('@/views/setup/m_prefix/PrefixForm.vue'),
+          meta: { 
+            title: 'Detail Prefix',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_prefix
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_format_nomor (Share active state with m_prefix)
+        // ============================================================================
+        {
+          path: '/setup/m_format_nomor',
+          name: 'FormatNomor',
+          component: () => import('@/views/setup/m_prefix/FormatNomorLanding.vue'),
+          meta: { 
+            title: 'Format Nomor',
+            requiresAuth: true,
+            parentMenu: 'Prefix' // Make sidebar highlight Prefix menu
+          },
+        },
+        {
+          path: '/setup/m_format_nomor/form/:id?',
+          name: 'FormatNomorForm',
+          component: () => import('@/views/setup/m_prefix/FormatNomor.vue'),
+          meta: { 
+            title: 'Form Format Nomor',
+            requiresAuth: true,
+            parentMenu: 'Prefix'
+          },
+        },
+        {
+          path: '/setup/m_format_nomor/view/:id',
+          name: 'FormatNomorView',
+          component: () => import('@/views/setup/m_prefix/FormatNomor.vue'),
+          meta: { 
+            title: 'Detail Format Nomor',
+            requiresAuth: true,
+            readOnly: true,
+            parentMenu: 'Prefix'
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_format_nomor
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_role
+        // ============================================================================
+        {
+          path: '/setup/m_role',
+          name: 'Role',
+          component: () => import('@/views/setup/m_role/RoleLanding.vue'),
+          meta: { 
+            title: 'Master Role',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_role/form/:id?',
+          name: 'RoleForm',
+          component: () => import('@/views/setup/m_role/RoleForm.vue'),
+          meta: { 
+            title: 'Form Role',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_role/view/:id',
+          name: 'RoleView',
+          component: () => import('@/views/setup/m_role/RoleForm.vue'),
+          meta: { 
+            title: 'Detail Role',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_role
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_respo
+        // ============================================================================
+        {
+          path: '/setup/m_respo',
+          name: 'Respo',
+          component: () => import('@/views/setup/m_respo/RespoLanding.vue'),
+          meta: { 
+            title: 'Master Respo',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_respo/form/:id?',
+          name: 'RespoForm',
+          component: () => import('@/views/setup/m_respo/RespoForm.vue'),
+          meta: { 
+            title: 'Form Respo',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_respo/view/:id',
+          name: 'RespoView',
+          component: () => import('@/views/setup/m_respo/RespoForm.vue'),
+          meta: { 
+            title: 'Detail Respo',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_respo
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_kary
+        // ============================================================================
+        {
+          path: '/setup/m_kary',
+          name: 'Kary',
+          component: () => import('@/views/setup/m_kary/KaryLanding.vue'),
+          meta: { 
+            title: 'Master Karyawan',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_kary/form/:id?',
+          name: 'KaryForm',
+          component: () => import('@/views/setup/m_kary/KaryForm.vue'),
+          meta: { 
+            title: 'Form Karyawan',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_kary/view/:id',
+          name: 'KaryView',
+          component: () => import('@/views/setup/m_kary/KaryForm.vue'),
+          meta: { 
+            title: 'Detail Karyawan',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_kary
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_approval
+        // ============================================================================
+        {
+          path: '/setup/m_approval',
+          name: 'Approval',
+          component: () => import('@/views/setup/m_approval/ApprovalLanding.vue'),
+          meta: { 
+            title: 'Master Approval',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_approval/form/:id?',
+          name: 'ApprovalForm',
+          component: () => import('@/views/setup/m_approval/ApprovalForm.vue'),
+          meta: { 
+            title: 'Form Approval',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_approval/view/:id',
+          name: 'ApprovalView',
+          component: () => import('@/views/setup/m_approval/ApprovalForm.vue'),
+          meta: { 
+            title: 'Detail Approval',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_approval
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_currency
+        // ============================================================================
+        {
+          path: '/setup/m_currency',
+          name: 'Currency',
+          component: () => import('@/views/setup/m_currency/CurrencyLanding.vue'),
+          meta: { 
+            title: 'Master Currency',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_currency/form/:id?',
+          name: 'CurrencyForm',
+          component: () => import('@/views/setup/m_currency/CurrencyForm.vue'),
+          meta: { 
+            title: 'Form Currency',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_currency/view/:id',
+          name: 'CurrencyView',
+          component: () => import('@/views/setup/m_currency/CurrencyForm.vue'),
+          meta: { 
+            title: 'Detail Currency',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_currency
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_item_group
+        // ============================================================================
+        {
+          path: '/setup/m_item_group',
+          name: 'ItemGroup',
+          component: () => import('@/views/setup/m_item_group/ItemGroupLanding.vue'),
+          meta: { 
+            title: 'Master Item Group',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_item_group/form/:id?',
+          name: 'ItemGroupForm',
+          component: () => import('@/views/setup/m_item_group/ItemGroupForm.vue'),
+          meta: { 
+            title: 'Form Item Group',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_item_group/view/:id',
+          name: 'ItemGroupView',
+          component: () => import('@/views/setup/m_item_group/ItemGroupForm.vue'),
+          meta: { 
+            title: 'Detail Item Group',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_item_group
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /setup/m_kendaraan
+        // ============================================================================
+        {
+          path: '/setup/m_kendaraan',
+          name: 'Kendaraan',
+          component: () => import('@/views/setup/m_kendaraan/KendaraanLanding.vue'),
+          meta: { 
+            title: 'Master Kendaraan',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_kendaraan/form/:id?',
+          name: 'KendaraanForm',
+          component: () => import('@/views/setup/m_kendaraan/KendaraanForm.vue'),
+          meta: { 
+            title: 'Form Kendaraan',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/setup/m_kendaraan/view/:id',
+          name: 'KendaraanView',
+          component: () => import('@/views/setup/m_kendaraan/KendaraanForm.vue'),
+          meta: { 
+            title: 'Detail Kendaraan',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /setup/m_kendaraan
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /purchasing/master/m_supplier
+        // ============================================================================
+        {
+          path: '/purchasing/master/m_supplier',
+          name: 'Supplier',
+          component: () => import('@/views/purchasing/master/m_supplier/SupplierLanding.vue'),
+          meta: { 
+            title: 'Master Supplier',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/master/m_supplier/form/:id?',
+          name: 'SupplierForm',
+          component: () => import('@/views/purchasing/master/m_supplier/SupplierForm.vue'),
+          meta: { 
+            title: 'Form Supplier',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/master/m_supplier/view/:id',
+          name: 'SupplierView',
+          component: () => import('@/views/purchasing/master/m_supplier/SupplierForm.vue'),
+          meta: { 
+            title: 'Detail Supplier',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/master/m_supplier
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /inventory/m_items
+        // ============================================================================
+        {
+          path: '/inventory/m_items',
+          name: 'Items',
+          component: () => import('@/views/inventory/m_items/ItemsLanding.vue'),
+          meta: { 
+            title: 'Master Items',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/m_items/form/:id?',
+          name: 'ItemsForm',
+          component: () => import('@/views/inventory/m_items/ItemsForm.vue'),
+          meta: { 
+            title: 'Form Items',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/m_items/view/:id',
+          name: 'ItemsView',
+          component: () => import('@/views/inventory/m_items/ItemsForm.vue'),
+          meta: { 
+            title: 'Detail Items',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/m_items
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /purchasing/transaksi/t_purchase_request
+        // ============================================================================
+        {
+          path: '/purchasing/transaksi/t_purchase_request',
+          name: 'TPurchaseRequest',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_request/TPurchaseRequestLanding.vue'),
+          meta: { 
+            title: 'Transaksi Purchase Request',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_request/form/:id?',
+          name: 'TPurchaseRequestForm',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_request/TPurchaseRequestForm.vue'),
+          meta: { 
+            title: 'Form TPurchaseRequest',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_request/view/:id',
+          name: 'TPurchaseRequestView',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_request/TPurchaseRequestForm.vue'),
+          meta: { 
+            title: 'Detail TPurchaseRequest',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/transaksi/t_purchase_request
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /purchasing/transaksi/t_purchase_request_close
+        // ============================================================================
+        {
+          path: '/purchasing/transaksi/t_purchase_request_close',
+          name: 'TPurchaseRequestClose',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_request_close/TPurchaseRequestCloseLanding.vue'),
+          meta: { 
+            title: 'Transaksi Purchase Request Close',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_request_close/form/:id?',
+          name: 'TPurchaseRequestCloseForm',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_request_close/TPurchaseRequestCloseForm.vue'),
+          meta: { 
+            title: 'Form Purchase Request Close',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_request_close/view/:id',
+          name: 'TPurchaseRequestCloseView',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_request_close/TPurchaseRequestCloseForm.vue'),
+          meta: { 
+            title: 'Detail Purchase Request Close',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/transaksi/t_purchase_request_close
+        // ============================================================================
+
+
+
+        // ============================================================================
+        // ROUTE: /purchasing/transaksi/t_purchase_order
+        // ============================================================================
+        {
+          path: '/purchasing/transaksi/t_purchase_order',
+          name: 'TPurchaseOrder',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_order/TPurchaseOrderLanding.vue'),
+          meta: { 
+            title: 'Transaksi Purchase Order',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_order/form/:id?',
+          name: 'TPurchaseOrderForm',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_order/TPurchaseOrderForm.vue'),
+          meta: { 
+            title: 'Form Purchase Order',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_order/view/:id',
+          name: 'TPurchaseOrderView',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_order/TPurchaseOrderForm.vue'),
+          meta: { 
+            title: 'Detail Purchase Order',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/transaksi/t_purchase_order
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /inventory/m_gudang
+        // ============================================================================
+        {
+          path: '/inventory/m_gudang',
+          name: 'Gudang',
+          component: () => import('@/views/inventory/m_gudang/GudangLanding.vue'),
+          meta: { 
+            title: 'Master Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/m_gudang/form/:id?',
+          name: 'GudangForm',
+          component: () => import('@/views/inventory/m_gudang/GudangForm.vue'),
+          meta: { 
+            title: 'Form Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/m_gudang/view/:id',
+          name: 'GudangView',
+          component: () => import('@/views/inventory/m_gudang/GudangForm.vue'),
+          meta: { 
+            title: 'Detail Gudang',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/m_gudang
+        // ============================================================================
+
+
+        // ============================================================================
+        // ROUTE: /inventory/stock_gudang
+        // ============================================================================
+        {
+          path: '/inventory/stock_gudang',
+          name: 'StockGudang',
+          component: () => import('@/views/inventory/info_stock/InfoStockView.vue'),
+          meta: { 
+            title: 'Info Stock Gudang',
+            requiresAuth: true 
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/stock_gudang
+        // ============================================================================
+
+
+        // ============================================================================
+        // ROUTE: /purchasing/transaksi/t_penerimaan
+        // ============================================================================
+        {
+          path: '/purchasing/transaksi/t_penerimaan',
+          name: 'TPenerimaan',
+          component: () => import('@/views/purchasing/transaksi/t_penerimaan/TPenerimaanLanding.vue'),
+          meta: { 
+            title: 'Transaksi Penerimaan',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_penerimaan/form/:id?',
+          name: 'TPenerimaanForm',
+          component: () => import('@/views/purchasing/transaksi/t_penerimaan/TPenerimaanForm.vue'),
+          meta: { 
+            title: 'Form Penerimaan',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_penerimaan/view/:id',
+          name: 'TPenerimaanView',
+          component: () => import('@/views/purchasing/transaksi/t_penerimaan/TPenerimaanForm.vue'),
+          meta: { 
+            title: 'Detail Penerimaan',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/transaksi/t_penerimaan
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /purchasing/transaksi/t_purchase_order_close
+        // ============================================================================
+        {
+          path: '/purchasing/transaksi/t_purchase_order_close',
+          name: 'TPurchaseOrderClose',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_order_close/TPurchaseOrderCloseLanding.vue'),
+          meta: { 
+            title: 'Transaksi Purchase Order Close',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_order_close/form/:id?',
+          name: 'TPurchaseOrderCloseForm',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_order_close/TPurchaseOrderCloseForm.vue'),
+          meta: { 
+            title: 'Form Purchase Order Close',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_order_close/view/:id',
+          name: 'TPurchaseOrderCloseView',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_order_close/TPurchaseOrderCloseForm.vue'),
+          meta: { 
+            title: 'Detail Purchase Order Close',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/transaksi/t_purchase_order_close
+        // ============================================================================
+
+
+
+
+
+        // ============================================================================
+        // ROUTE: /purchasing/transaksi/t_purchase_invoice
+        // ============================================================================
+        {
+          path: '/purchasing/transaksi/t_purchase_invoice',
+          name: 'TPurchaseInvoice',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_invoice/TPurchaseInvoiceLanding.vue'),
+          meta: { 
+            title: 'Transaksi Purchase Invoice',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_invoice/form/:id?',
+          name: 'TPurchaseInvoiceForm',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_invoice/TPurchaseInvoiceForm.vue'),
+          meta: { 
+            title: 'Form Purchase Invoice',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_invoice/view/:id',
+          name: 'TPurchaseInvoiceView',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_invoice/TPurchaseInvoiceForm.vue'),
+          meta: { 
+            title: 'Detail Purchase Invoice',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/transaksi/t_purchase_invoice
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /purchasing/transaksi/t_purchase_return
+        // ============================================================================
+        {
+          path: '/purchasing/transaksi/t_purchase_return',
+          name: 'TPurchaseReturn',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_return/TPurchaseReturnLanding.vue'),
+          meta: { 
+            title: 'Transaksi Purchase Return',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_return/form/:id?',
+          name: 'TPurchaseReturnForm',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_return/TPurchaseReturnForm.vue'),
+          meta: { 
+            title: 'Form Purchase Return',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/purchasing/transaksi/t_purchase_return/view/:id',
+          name: 'TPurchaseReturnView',
+          component: () => import('@/views/purchasing/transaksi/t_purchase_return/TPurchaseReturnForm.vue'),
+          meta: { 
+            title: 'Detail Purchase Return',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /purchasing/transaksi/t_purchase_return
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /marketing/transaksi/t_sales_quotation
+        // ============================================================================
+        {
+          path: '/marketing/transaksi/t_sales_quotation',
+          name: 'TSalesQuotation',
+          component: () => import('@/views/marketing/transaksi/t_sales_quotation/TSalesQuotationLanding.vue'),
+          meta: { 
+            title: 'Transaksi Sales Quotation',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/marketing/transaksi/t_sales_quotation/form/:id?',
+          name: 'TSalesQuotationForm',
+          component: () => import('@/views/marketing/transaksi/t_sales_quotation/TSalesQuotationForm.vue'),
+          meta: { 
+            title: 'Form Sales Quotation',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/marketing/transaksi/t_sales_quotation/view/:id',
+          name: 'TSalesQuotationView',
+          component: () => import('@/views/marketing/transaksi/t_sales_quotation/TSalesQuotationForm.vue'),
+          meta: { 
+            title: 'Detail Sales Quotation',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /marketing/transaksi/t_sales_quotation
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /inventory/t_transfer_gudang
+        // ============================================================================
+        {
+          path: '/inventory/t_transfer_gudang',
+          name: 'TransferGudang',
+          component: () => import('@/views/inventory/t_transfer_gudang/TransferGudangLanding.vue'),
+          meta: { 
+            title: 'Transaksi Transfer Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_transfer_gudang/form/:id?',
+          name: 'TransferGudangForm',
+          component: () => import('@/views/inventory/t_transfer_gudang/TransferGudangForm.vue'),
+          meta: { 
+            title: 'Form Transfer Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_transfer_gudang/view/:id',
+          name: 'TransferGudangView',
+          component: () => import('@/views/inventory/t_transfer_gudang/TransferGudangForm.vue'),
+          meta: { 
+            title: 'Detail Transfer Gudang',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/t_transfer_gudang
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /marketing/master/m_customer
+        // ============================================================================
+        {
+          path: '/marketing/master/m_customer',
+          name: 'Customer',
+          component: () => import('@/views/marketing/master/m_customer/CustomerLanding.vue'),
+          meta: { 
+            title: 'Master Customer',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/marketing/master/m_customer/form/:id?',
+          name: 'CustomerForm',
+          component: () => import('@/views/marketing/master/m_customer/CustomerForm.vue'),
+          meta: { 
+            title: 'Form Customer',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/marketing/master/m_customer/view/:id',
+          name: 'CustomerView',
+          component: () => import('@/views/marketing/master/m_customer/CustomerForm.vue'),
+          meta: { 
+            title: 'Detail Customer',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /marketing/master/m_customer
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /marketing/master/m_prospek
+        // ============================================================================
+        {
+          path: '/marketing/master/m_prospek',
+          name: 'Prospek',
+          component: () => import('@/views/marketing/master/m_prospek/ProspekLanding.vue'),
+          meta: { 
+            title: 'Master Prospek',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/marketing/master/m_prospek/form/:id?',
+          name: 'ProspekForm',
+          component: () => import('@/views/marketing/master/m_prospek/ProspekForm.vue'),
+          meta: { 
+            title: 'Form Prospek',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/marketing/master/m_prospek/view/:id',
+          name: 'ProspekView',
+          component: () => import('@/views/marketing/master/m_prospek/ProspekForm.vue'),
+          meta: { 
+            title: 'Detail Prospek',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /marketing/master/m_prospek
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /inventory/t_sj_gudang
+        // ============================================================================
+        {
+          path: '/inventory/t_sj_gudang',
+          name: 'SjGudang',
+          component: () => import('@/views/inventory/t_sj_gudang/SjGudangLanding.vue'),
+          meta: { 
+            title: 'Transaksi Sj Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_sj_gudang/form/:id?',
+          name: 'SjGudangForm',
+          component: () => import('@/views/inventory/t_sj_gudang/SjGudangForm.vue'),
+          meta: { 
+            title: 'Form Sj Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_sj_gudang/view/:id',
+          name: 'SjGudangView',
+          component: () => import('@/views/inventory/t_sj_gudang/SjGudangForm.vue'),
+          meta: { 
+            title: 'Detail Sj Gudang',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/t_sj_gudang
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /inventory/t_penerimaan_gudang
+        // ============================================================================
+        {
+          path: '/inventory/t_penerimaan_gudang',
+          name: 'PenerimaanGudang',
+          component: () => import('@/views/inventory/t_penerimaan_gudang/PenerimaanGudangLanding.vue'),
+          meta: { 
+            title: 'Transaksi Penerimaan Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_penerimaan_gudang/form/:id?',
+          name: 'PenerimaanGudangForm',
+          component: () => import('@/views/inventory/t_penerimaan_gudang/PenerimaanGudangForm.vue'),
+          meta: { 
+            title: 'Form Penerimaan Gudang',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_penerimaan_gudang/view/:id',
+          name: 'PenerimaanGudangView',
+          component: () => import('@/views/inventory/t_penerimaan_gudang/PenerimaanGudangForm.vue'),
+          meta: { 
+            title: 'Detail Penerimaan Gudang',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/t_penerimaan_gudang
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /inventory/t_stock_adj
+        // ============================================================================
+        {
+          path: '/inventory/t_stock_adj',
+          name: 'StockAdj',
+          component: () => import('@/views/inventory/t_stock_adj/StockAdjLanding.vue'),
+          meta: { 
+            title: 'Transaksi Stock Adj',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_stock_adj/form/:id?',
+          name: 'StockAdjForm',
+          component: () => import('@/views/inventory/t_stock_adj/StockAdjForm.vue'),
+          meta: { 
+            title: 'Form Stock Adj',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_stock_adj/view/:id',
+          name: 'StockAdjView',
+          component: () => import('@/views/inventory/t_stock_adj/StockAdjForm.vue'),
+          meta: { 
+            title: 'Detail Stock Adj',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/t_stock_adj
+        // ============================================================================
+
+        // ============================================================================
+        // ROUTE: /inventory/t_stock_opname
+        // ============================================================================
+        {
+          path: '/inventory/t_stock_opname',
+          name: 'StockOpname',
+          component: () => import('@/views/inventory/t_stock_opname/StockOpnameLanding.vue'),
+          meta: { 
+            title: 'Transaksi Stock Opname',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_stock_opname/form/:id?',
+          name: 'StockOpnameForm',
+          component: () => import('@/views/inventory/t_stock_opname/StockOpnameForm.vue'),
+          meta: { 
+            title: 'Form Stock Opname',
+            requiresAuth: true 
+          },
+        },
+        {
+          path: '/inventory/t_stock_opname/view/:id',
+          name: 'StockOpnameView',
+          component: () => import('@/views/inventory/t_stock_opname/StockOpnameForm.vue'),
+          meta: { 
+            title: 'Detail Stock Opname',
+            requiresAuth: true,
+            readOnly: true
+          },
+        },
+        // ============================================================================
+        // END ROUTE: /inventory/t_stock_opname
+        // ============================================================================
+      ],
+    },
+  ],
+})
+
+// Navigation guard untuk authentication
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // Check if user has valid session
+  authStore.checkAuth()
+  
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresSuperAdmin = to.matched.some(record => record.meta.requiresSuperAdmin)
+  const isAuthenticated = authStore.isAuthenticated
+
+  if (requiresAuth && !isAuthenticated) {
+    // Redirect to login if trying to access protected route
+    next({ name: 'Login' })
+  } else if (requiresSuperAdmin && !authStore.isSuperAdmin) {
+    // Redirect to dashboard if trying to access SUPER ADMIN only route
+    next({ name: 'Dashboard' })
+  } else if (to.name === 'Login' && isAuthenticated) {
+    // Redirect to dashboard if already logged in and trying to access login
+    next({ name: 'Dashboard' })
+  } else if (requiresAuth && isAuthenticated && !authStore.isSuperAdmin) {
+    // For regular users, check if they have access to this route based on SelectRespo
+    // Skip check for certain routes: login, dashboard, notifikasi
+    const publicRoutes = ['Login', 'Dashboard', 'Notifikasi', 'NotifikasiDetail', 'NotifikasiItemDetail']
+    
+    if (!publicRoutes.includes(to.name as string)) {
+      // Get SelectRespo from localStorage
+      const selectRespoData = localStorage.getItem('SelectRespo')
+      
+      if (selectRespoData) {
+        try {
+          const selectRespo = JSON.parse(selectRespoData)
+          const userMenus = selectRespo.menus || []
+          
+          // Check if user has access to this route
+          let hasAccess = userMenus.some((menu: any) => {
+            // Check exact path match or parent path match (for form/view routes)
+            return to.path === menu.path || to.path.startsWith(menu.path + '/')
+          })
+          
+          // If no direct access found, check if route has a parentMenu meta
+          // For example: /setup/m_format_nomor has parentMenu: 'Prefix'
+          // So we check if /setup/m_prefix exists in user's menus
+          if (!hasAccess && to.meta.parentMenu) {
+            // Find the parent menu in user's menus by matching route names or paths
+            const parentMenuName = to.meta.parentMenu as string
+            
+            // Try to find parent menu by checking if any menu path matches common patterns
+            hasAccess = userMenus.some((menu: any) => {
+              // Check if menu name matches parent menu name (case insensitive)
+              if (menu.name && menu.name.toLowerCase().includes(parentMenuName.toLowerCase())) {
+                return true
+              }
+              
+              // For m_format_nomor → check if m_prefix menu exists
+              // Extract base path from current route (e.g., /setup/m_format_nomor → /setup/m_prefix)
+              const currentBasePath = to.path.split('/').slice(0, 3).join('/') // /setup/m_format_nomor
+              const prefixPath = '/setup/m_prefix'
+              
+              // If current path starts with /setup/m_format_nomor and menu has /setup/m_prefix
+              if (currentBasePath === '/setup/m_format_nomor' && menu.path === prefixPath) {
+                return true
+              }
+              
+              return false
+            })
+          }
+          
+          // Also check CHILD_ROUTE_MAPPING for child routes that inherit from parent menus
+          if (!hasAccess) {
+            const CHILD_ROUTE_MAPPING: Record<string, string> = {
+              '/setup/m_format_nomor': '/setup/m_prefix',
+              // Add more child route mappings here as needed
+            }
+            
+            const basePath = '/' + to.path.split('/').slice(1, 3).join('/')
+            const parentPath = CHILD_ROUTE_MAPPING[basePath]
+            
+            if (parentPath) {
+              hasAccess = userMenus.some((menu: any) => {
+                return menu.path === parentPath || to.path.startsWith(parentPath + '/')
+              })
+            }
+          }
+          
+          if (!hasAccess) {
+            // User doesn't have access to this route
+            console.warn(`Access denied to route: ${to.path}`)
+            next({ name: 'Dashboard' })
+            return
+          }
+        } catch (e) {
+          console.error('Error parsing SelectRespo:', e)
+        }
+      }
+    }
+    
+    next()
+  } else {
+    next()
+  }
+})
+
+// Update document title on route change
+router.afterEach((to) => {
+  const title = to.meta.title as string
+  document.title = title ? `BB - ${title}` : 'BB - Bos Baut'
+})
+
+export default router

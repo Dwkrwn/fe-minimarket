@@ -1,0 +1,1376 @@
+<script setup lang="ts">
+import { ref, onMounted, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import {
+  ArrowLeft,
+  Check,
+  X,
+  Clock,
+  ShoppingCart,
+  User,
+  FileText,
+  Calendar,
+  AlertCircle,
+  Package,
+  Paperclip,
+  Download,
+  Eye,
+  ExternalLink,
+  Ban,
+} from "lucide-vue-next";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "vue-sonner";
+import {
+  getPurchaseReturnNotifications,
+  revisePurchaseReturn,
+  approvePurchaseReturn,
+  rejectPurchaseReturn,
+  type PurchaseReturnNotification,
+} from "./service.preturn";
+import { useApi } from "@/composables/useApi";
+import { useAuthStore } from "@/stores/auth";
+import FieldX from "@/components/field/FieldX.vue";
+
+const { API_BASE_URL } = useApi();
+const authStore = useAuthStore();
+const router = useRouter();
+const route = useRoute();
+const loading = ref(true);
+const submitting = ref(false);
+const notification = ref<PurchaseReturnNotification | null>(null);
+const approvalCatatan = ref("");
+const alasanReturnMap = ref<Record<string, string>>({});
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const notificationTitle = computed(() => {
+  const noReturn = notification.value?.t_purchase_return?.no_return;
+  if (noReturn) return `Request Approval Purchase Return: ${noReturn}`;
+  return notification.value?.title || "Request Approval Purchase Return";
+});
+
+const purchaseReturn = computed(() => notification.value?.t_purchase_return);
+
+const isPbReference = computed(() => Boolean(purchaseReturn.value?.is_pi_pb));
+
+const formatNumber = (value: unknown) => {
+  const numeric = Number(value || 0);
+  return new Intl.NumberFormat("id-ID", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(numeric) ? numeric : 0);
+};
+
+const toNumber = (value: unknown) => {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const shortId = (value?: string | null) => {
+  if (!value) return "";
+  return value.slice(0, 8);
+};
+
+const formatReferenceCode = (
+  code?: string | null,
+  fallbackId?: string | null,
+  fallbackPrefix = "Detail",
+) => {
+  if (code && code !== "-") return code;
+  if (fallbackId) return `${fallbackPrefix} ${shortId(fallbackId)}`;
+  return "-";
+};
+
+const getNested = (source: any, paths: string[]) => {
+  for (const path of paths) {
+    const value = path
+      .split(".")
+      .reduce((current, key) => current?.[key], source);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return undefined;
+};
+
+const calculateDiscountTotal = (
+  amount: number,
+  disc1: number,
+  disc2: number,
+  discAmount: number,
+) => {
+  const disc1Amount = amount * (disc1 / 100);
+  const afterDisc1 = amount - disc1Amount;
+  const disc2Amount = afterDisc1 * (disc2 / 100);
+  return disc1Amount + disc2Amount + discAmount;
+};
+
+const normalizeReturnDetail = (detail: any) => {
+  const item = detail.m_item || {};
+  const piD = detail.pi_d || {};
+  const pbD =
+    detail.pb_d ||
+    piD.t_penerimaan_barang_d ||
+    piD.tpenerimaan_bd ||
+    {};
+  const poD = pbD.t_purchase_order_d || piD.t_purchase_order_d || {};
+
+  const qtyRetur = toNumber(detail.qty_retur);
+  const qtyPb = toNumber(detail.qty_pb ?? pbD.qty_diterima);
+  const qtyPi = toNumber(detail.qty_pi ?? piD.qty_pi);
+  const harga = toNumber(detail.harga ?? piD.harga ?? poD.harga);
+  const disc1 = toNumber(detail.r_disc1 ?? detail.disc_1_percent ?? poD.disc_1);
+  const disc2 = toNumber(detail.r_disc2 ?? detail.disc_2_percent ?? poD.disc_2);
+  const disc3 = toNumber(detail.r_disc3 ?? detail.disc_3_percent);
+  const discAmount = toNumber(detail.disc_amt ?? detail.disc_amount ?? poD.amt_disc);
+  const gross = qtyRetur * harga;
+  const computedDiscount = calculateDiscountTotal(gross, disc1, disc2, discAmount);
+  const totalDiskon =
+    detail.total_diskon !== null && detail.total_diskon !== undefined
+      ? toNumber(detail.total_diskon)
+      : computedDiscount;
+  const subtotal =
+    detail.subtotal !== null && detail.subtotal !== undefined
+      ? toNumber(detail.subtotal)
+      : gross - totalDiskon;
+  const ppn = toNumber(detail.ppn_amt ?? detail.ppn);
+  const pph = toNumber(detail.pph_amt ?? detail.pph);
+  const grandTotal =
+    detail.grand_total !== null && detail.grand_total !== undefined
+      ? toNumber(detail.grand_total)
+      : subtotal + ppn - pph;
+
+  const pbId = detail.t_penerimaan_barang_d_id || pbD.id;
+  const piId = detail.t_purchase_invoice_d_id || piD.id;
+  const poId =
+    poD.t_purchase_order_id ||
+    pbD.t_purchase_order_id ||
+    piD.t_purchase_order_id;
+
+  return {
+    ...detail,
+    kode_item: item.kode_item || detail.kode_item || "-",
+    nama_item: item.nama_item || detail.nama_item || "-",
+    no_penerimaan: formatReferenceCode(
+      getNested(detail, [
+        "no_penerimaan",
+        "no_pb",
+        "pb_d.t_penerimaan_barang.no_penerimaan",
+        "pi_d.t_penerimaan_barang_d.t_penerimaan_barang.no_penerimaan",
+        "pi_d.tpenerimaan_bd.t_penerimaan_barang.no_penerimaan",
+      ]),
+      pbId,
+      "PB-D",
+    ),
+    no_pi: formatReferenceCode(
+      getNested(detail, ["no_pi", "pi_d.t_purchase_invoice.no_pi"]),
+      piId,
+      "PI-D",
+    ),
+    no_po: formatReferenceCode(
+      getNested(detail, [
+        "no_po",
+        "pi_d.t_purchase_invoice.t_purchase_order.no_po",
+        "pb_d.t_purchase_order_d.t_purchase_order.no_po",
+        "pi_d.t_purchase_order_d.t_purchase_order.no_po",
+      ]),
+      poId,
+      "PO",
+    ),
+    rak_display:
+      getNested(detail, [
+        "rak_display",
+        "pb_d.m_rak_d.kode",
+        "pi_d.t_penerimaan_barang_d.m_rak_d.kode",
+      ]) || (pbD.rak_d_id ? `Rak ${shortId(pbD.rak_d_id)}` : "-"),
+    qty_pb: qtyPb,
+    qty_pi: qtyPi,
+    qty_retur: qtyRetur,
+    satuan:
+      item.mi_uom?.value1 ||
+      item.uom?.value1 ||
+      detail.satuan ||
+      "-",
+    harga,
+    disc_1_percent: disc1,
+    disc_2_percent: disc2,
+    disc_3_percent: disc3,
+    disc_amount: discAmount,
+    total_diskon: totalDiskon,
+    subtotal,
+    ppn,
+    pph,
+    grand_total: grandTotal,
+    alasan: detail.alasan || "",
+    alasan_id: detail.alasan_id || detail.alasan,
+    catatan: detail.catatan || "",
+    bukti_foto: detail.bukti_foto || null,
+  };
+};
+
+const returnDetails = computed(() =>
+  (purchaseReturn.value?.t_purchase_return_ds || []).map((detail: any) =>
+    normalizeReturnDetail(detail),
+  ),
+);
+
+const getUniqueValues = <T,>(
+  rows: T[],
+  getter: (row: T) => string | null | undefined,
+) => {
+  const values = rows
+    .map((row) => getter(row)?.trim())
+    .filter((value): value is string => Boolean(value && value !== "-"));
+  return [...new Set(values)];
+};
+
+const formatReferenceList = (values: string[]) => {
+  if (values.length === 0) return "-";
+  return values.join(", ");
+};
+
+const purchaseReturnReferences = computed(() => {
+  const rows = returnDetails.value;
+  const header = purchaseReturn.value;
+
+  const pbNumbers = getUniqueValues(
+    rows,
+    (item) => item.no_penerimaan || item.no_pb,
+  );
+  const piNumbers = getUniqueValues(rows, (item) => item.no_pi);
+  const poNumbers = getUniqueValues(rows, (item) => item.no_po);
+
+  if (header?.t_penerimaan_barang?.no_penerimaan) {
+    pbNumbers.unshift(header.t_penerimaan_barang.no_penerimaan);
+  }
+  if (header?.t_purchase_invoice?.no_pi) {
+    piNumbers.unshift(header.t_purchase_invoice.no_pi);
+  }
+  if (header?.t_purchase_invoice?.t_purchase_order?.no_po) {
+    poNumbers.unshift(header.t_purchase_invoice.t_purchase_order.no_po);
+  }
+
+  return {
+    pb: [...new Set(pbNumbers)],
+    pi: [...new Set(piNumbers)],
+    po: [...new Set(poNumbers)],
+  };
+});
+
+const totalPpnDetail = computed(() =>
+  returnDetails.value.reduce((total, item) => total + toNumber(item.ppn), 0),
+);
+
+const totalPphDetail = computed(() =>
+  returnDetails.value.reduce((total, item) => total + toNumber(item.pph), 0),
+);
+
+// Preview image dialog
+const showPreviewDialog = ref(false);
+const previewImageUrl = ref("");
+const previewFileName = ref("");
+
+const notificationId = computed(() => route.params.id as string);
+
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const loadAlasanReturnMap = async () => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/dynamic/m_general?no_pagination=true&selectfield=id,value1&filter_column_key1=alasan_return&filter_column_is_active=true`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      },
+    );
+
+    if (!response.ok) return;
+    const payload = await response.json();
+    const rows = Array.isArray(payload?.data) ? payload.data : [];
+
+    const mapped: Record<string, string> = {};
+    for (const row of rows) {
+      if (row?.id && row?.value1) mapped[row.id] = row.value1;
+    }
+    alasanReturnMap.value = mapped;
+  } catch {
+    // fallback: keep raw value if mapping gagal
+  }
+};
+
+const getAlasanDisplay = (alasan?: string, alasanId?: string) => {
+  const id =
+    (alasanId && uuidRegex.test(alasanId) && alasanId) ||
+    (alasan && uuidRegex.test(alasan) && alasan) ||
+    "";
+
+  if (id && alasanReturnMap.value[id]) {
+    return alasanReturnMap.value[id];
+  }
+
+  return alasan || "-";
+};
+
+const fetchNotificationDetail = async () => {
+  try {
+    loading.value = true;
+    const response = await getPurchaseReturnNotifications(1, 100);
+    console.log("Fetched notifications:", response.data);
+    const found = response.data.find((n) => n.id === notificationId.value);
+
+    if (!found) {
+      toast.error("Notification not found");
+      router.push("/notifikasi");
+      return;
+    }
+
+    notification.value = found;
+    approvalCatatan.value = found.approval_catatan || "";
+  } catch (error: any) {
+    toast.error("Failed to load notification", {
+      description: error.message || "An error occurred",
+    });
+    router.push("/notifikasi");
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleApproval = async (status: "APPROVED" | "REVISI") => {
+  if (!notification.value) return;
+
+  if (status === "REVISI" && !approvalCatatan.value?.trim()) {
+    toast.error("Alasan Revisi wajib diisi", {
+      description: "Silakan masukkan alasan sebelum melakukan revisi",
+    });
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    // Get approval info from localStorage
+    const approvalList = authStore.getApprovalList();
+    const prApproval = approvalList.find(
+      (a: any) =>
+        a.path === "/purchasing/transaksi/t_purchase_return" &&
+        a.tipe_approve?.toUpperCase() === "MENYETUJUI",
+    );
+
+    if (!prApproval) {
+      toast.error("Approval level not found", {
+        description: "Anda tidak memiliki hak untuk menyetujui Purchase Return",
+      });
+      return;
+    }
+
+    const approvalLevel = prApproval.level;
+
+    if (approvalLevel === undefined || approvalLevel === null) {
+      toast.error("Invalid approval level", {
+        description: "Approval level is missing",
+      });
+      return;
+    }
+
+    if (status === "REVISI") {
+      // Use revisi function from service
+      await revisePurchaseReturn(
+        notification.value.t_purchase_return_id!,
+        notification.value.id,
+        approvalLevel,
+        approvalCatatan.value,
+      );
+    } else {
+      // APPROVED - Use approve function from service
+      await approvePurchaseReturn(
+        notification.value.t_purchase_return_id!,
+        notification.value.id,
+        approvalLevel,
+        approvalCatatan.value,
+      );
+
+      // Sync stock to gudang after successful approval
+      toast.loading("Sedang mensinkronkan STOCK ITEM di GUDANG...", {
+        id: "sync-stock",
+      });
+      try {
+        const { syncStockFromPurchaseReturn } =
+          await import("./service.preturn");
+        await syncStockFromPurchaseReturn();
+        toast.success("Stock berhasil disinkronkan", { id: "sync-stock" });
+      } catch (syncError) {
+        toast.error("Gagal sinkronkan stock", {
+          id: "sync-stock",
+          description: "Silakan jalankan sync manual",
+        });
+      }
+    }
+
+    toast.success(
+      `Purchase Return ${status === "APPROVED" ? "approved" : "revised"} successfully`,
+    );
+    router.push("/notifikasi");
+  } catch (error: any) {
+    toast.error("Failed to submit approval", {
+      description: error.message || "An error occurred",
+    });
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const handleReject = async () => {
+  if (!notification.value) return;
+
+  // Validate catatan is required
+  if (!approvalCatatan.value?.trim()) {
+    toast.error("Alasan Reject wajib diisi", {
+      description: "Silakan masukkan alasan sebelum melakukan reject",
+    });
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    // Get approval info from localStorage
+    const approvalList = authStore.getApprovalList();
+    const prApproval = approvalList.find(
+      (a: any) =>
+        a.path === "/purchasing/transaksi/t_purchase_return" &&
+        a.tipe_approve?.toUpperCase() === "MENYETUJUI",
+    );
+
+    if (!prApproval) {
+      toast.error("Approval level not found", {
+        description: "Anda tidak memiliki hak untuk reject Purchase Return",
+      });
+      return;
+    }
+
+    const approvalLevel = prApproval.level;
+
+    if (approvalLevel === undefined || approvalLevel === null) {
+      toast.error("Invalid approval level", {
+        description: "Approval level is missing",
+      });
+      return;
+    }
+
+    await rejectPurchaseReturn(
+      notification.value.t_purchase_return_id!,
+      notification.value.id,
+      approvalLevel,
+      approvalCatatan.value,
+    );
+
+    toast.success("Purchase Return berhasil di-reject");
+    router.push("/notifikasi");
+  } catch (error: any) {
+    toast.error("Gagal reject", {
+      description: error.message || "Terjadi kesalahan",
+    });
+  } finally {
+    submitting.value = false;
+  }
+};
+
+// Get status badge variant
+const getStatusVariant = (status: string) => {
+  switch (status?.toUpperCase()) {
+    case "APPROVED":
+      return "default";
+    case "IN APPROVAL":
+      return "secondary";
+    case "REVISI":
+      return "destructive";
+    case "REJECT":
+      return "destructive";
+    case "DRAFT":
+      return "outline";
+    default:
+      return "secondary";
+  }
+};
+
+// Get priority badge variant
+const getPriorityVariant = (priority: string) => {
+  switch (priority?.toUpperCase()) {
+    case "URGENT":
+      return "destructive";
+    case "HIGH":
+      return "destructive";
+    case "NORMAL":
+      return "secondary";
+    case "LOW":
+      return "outline";
+    default:
+      return "secondary";
+  }
+};
+
+// File helpers
+const getFileUrl = (path: string) => {
+  if (!path) return "";
+  const baseUrl = API_BASE_URL.replace("/api", "");
+  return `${baseUrl}/${path}`;
+};
+
+const getFileName = (path: string) => {
+  if (!path) return "Unknown file";
+  return path.split("/").pop() || path;
+};
+
+// Check if file is an image
+const isImageFile = (path: string) => {
+  if (!path) return false;
+  const ext = path.toLowerCase().split(".").pop();
+  return ["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp", "svg"].includes(
+    ext || "",
+  );
+};
+
+// Check if file is PDF
+const isPdfFile = (path: string) => {
+  if (!path) return false;
+  return path.toLowerCase().endsWith(".pdf");
+};
+
+const openFile = (path: string) => {
+  if (!path) return;
+  const url = getFileUrl(path);
+
+  // If it's an image, show in preview dialog
+  if (isImageFile(path)) {
+    previewImageUrl.value = url;
+    previewFileName.value = getFileName(path);
+    showPreviewDialog.value = true;
+  } else {
+    // For PDF and other files, open in new tab
+    window.open(url, "_blank");
+  }
+};
+
+const openPreviewInNewTab = () => {
+  window.open(previewImageUrl.value, "_blank");
+};
+
+const downloadPreviewImage = () => {
+  const link = document.createElement("a");
+  link.href = previewImageUrl.value;
+  link.download = previewFileName.value;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const downloadFile = (path: string) => {
+  if (!path) return;
+  const url = getFileUrl(path);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = getFileName(path);
+  link.target = "_blank";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+onMounted(() => {
+  loadAlasanReturnMap();
+  fetchNotificationDetail();
+});
+</script>
+
+<template>
+  <div class="p-4 md:p-6 space-y-4 md:space-y-6">
+    <!-- Header -->
+    <div class="flex items-start gap-3 md:gap-4">
+      <Button
+        variant="ghost"
+        size="icon"
+        class="shrink-0 mt-1"
+        @click="router.push('/notifikasi')"
+      >
+        <ArrowLeft class="h-5 w-5" />
+      </Button>
+      <div class="min-w-0">
+        <h1
+          class="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2"
+        >
+          <ShoppingCart class="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0" />
+          <span class="truncate">Purchase Return Approval</span>
+        </h1>
+        <p class="text-xs md:text-sm text-muted-foreground">
+          Review and approve purchase return
+        </p>
+      </div>
+    </div>
+
+    <Separator />
+
+    <!-- Loading State -->
+    <div v-if="loading" class="space-y-4 md:space-y-6">
+      <Card>
+        <CardHeader>
+          <Skeleton class="h-6 w-64" />
+          <Skeleton class="h-4 w-full mt-2" />
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <Skeleton class="h-4 w-full" />
+          <Skeleton class="h-4 w-3/4" />
+          <Skeleton class="h-32 w-full" />
+        </CardContent>
+      </Card>
+    </div>
+
+    <!-- Content -->
+    <div v-else-if="notification" class="space-y-4 md:space-y-6">
+      <!-- Notification Info Card -->
+      <Card class="border-l-4 border-l-primary">
+        <CardHeader class="p-4 md:p-6">
+          <div
+            class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2"
+          >
+            <div class="min-w-0">
+              <CardTitle
+                class="text-base md:text-lg flex items-center gap-2 flex-wrap"
+              >
+                <span class="wrap-break-word">{{ notificationTitle }}</span>
+              </CardTitle>
+              <CardDescription class="mt-1 text-sm">{{
+                notification.approval_message
+              }}</CardDescription>
+            </div>
+            <Badge
+              :variant="getStatusVariant(notification.status_name || '')"
+              class="shrink-0 self-start"
+            >
+              {{ notification.status_name || "PENDING" }}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent class="p-4 md:p-6 pt-0 md:pt-0 space-y-4">
+          <div
+            v-if="notification.approval_catatan"
+            class="p-3 bg-muted rounded-md"
+          >
+            <Label class="text-xs md:text-sm font-medium text-muted-foreground"
+              >Catatan dari Pengaju</Label
+            >
+            <p class="text-sm md:text-base mt-1">
+              {{ notification.approval_catatan }}
+            </p>
+          </div>
+
+          <div
+            class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm"
+          >
+            <div class="flex items-center gap-2">
+              <User class="h-4 w-4 text-muted-foreground shrink-0" />
+              <Label class="text-muted-foreground shrink-0">Pengaju:</Label>
+              <span class="font-medium truncate">{{
+                notification.tp_return_sender?.name || "N/A"
+              }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <Clock class="h-4 w-4 text-muted-foreground shrink-0" />
+              <span class="text-xs md:text-sm">{{
+                formatDateTime(notification.createdAt)
+              }}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Purchase Return Details Card -->
+      <Card v-if="notification.t_purchase_return">
+        <CardHeader class="p-4 md:p-6">
+          <CardTitle class="text-base md:text-lg flex items-center gap-2">
+            <FileText class="h-5 w-5 shrink-0" />
+            Informasi Purchase Return
+          </CardTitle>
+          <CardDescription class="text-xs md:text-sm"
+            >Detail lengkap Purchase Return yang diajukan</CardDescription
+          >
+        </CardHeader>
+        <CardContent class="p-4 md:p-6 pt-0 md:pt-0 space-y-4 md:space-y-6">
+          <!-- Basic Info Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >No. Purchase Return</Label
+              >
+              <p class="text-base md:text-lg font-bold text-primary break-all">
+                {{ notification.t_purchase_return.no_return || "-" }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Tanggal Return</Label
+              >
+              <p class="text-sm md:text-base font-medium">
+                {{
+                  notification.t_purchase_return.tgl_retur
+                    ? formatDate(notification.t_purchase_return.tgl_retur)
+                    : "-"
+                }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Status</Label
+              >
+              <div>
+                <Badge
+                  :variant="
+                    getStatusVariant(notification.t_purchase_return.status)
+                  "
+                  >{{ notification.t_purchase_return.status }}</Badge
+                >
+              </div>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Supplier</Label
+              >
+              <p class="text-sm md:text-base font-medium">
+                {{
+                  notification.t_purchase_return.m_supplier?.nama_supp || "-"
+                }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Gudang</Label
+              >
+              <p class="text-sm md:text-base font-medium">
+                {{
+                  notification.t_purchase_return.m_gudang?.nama_gudang || "-"
+                }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Tipe Retur</Label
+              >
+              <div>
+                <Badge variant="outline">{{
+                  notification.t_purchase_return.t_pr_retur?.value1 || "-"
+                }}</Badge>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Referensi</Label
+              >
+              <p class="text-sm md:text-base">
+                <!-- {{
+                  isPbReference
+                    ? formatReferenceList(purchaseReturnReferences.pb)
+                    : formatReferenceList(purchaseReturnReferences.pi)
+                }} -->
+                {{
+                  notification.t_purchase_return.is_pi_pb ? "Reff Penerimaan Barang" : "Reff Purchase invoice"
+                }}
+              </p>
+            </div>
+            <!-- <div v-if="purchaseReturnReferences.po.length" class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >No. Purchase Order</Label
+              >
+              <p class="text-sm md:text-base">
+                {{ formatReferenceList(purchaseReturnReferences.po) }}
+              </p>
+            </div> -->
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Currency</Label
+              >
+              <p class="text-sm md:text-base">
+                {{
+                  notification.t_purchase_return.m_currency?.nama_currency ||
+                  "-"
+                }}
+              </p>
+            </div>
+            <div v-if="!isPbReference" class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Grand Total</Label
+              >
+              <p class="text-base md:text-lg font-bold text-primary">
+                {{ formatNumber(notification.t_purchase_return.grand_total) }}
+              </p>
+            </div>
+          </div>
+
+          <Separator v-if="!isPbReference" />
+
+          <!-- Tax Info -->
+          <div v-if="!isPbReference" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Total PPN Detail</Label
+              >
+              <p class="text-sm md:text-base">
+                {{ formatNumber(totalPpnDetail) }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Total PPh Detail</Label
+              >
+              <p class="text-sm md:text-base">
+                {{ formatNumber(totalPphDetail) }}
+              </p>
+            </div>
+            <!-- <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+              >
+                {{
+                  isPbReference ? "Reff Penerimaan Barang" : "Reff Purchase Invoice"
+                }}
+              </Label>
+              <p class="text-sm md:text-base font-medium">
+                {{
+                  isPbReference
+                    ? formatReferenceList(purchaseReturnReferences.pb)
+                    : formatReferenceList(purchaseReturnReferences.pi)
+                }}
+              </p>
+            </div> -->
+          </div>
+
+          <!-- Gudang Address Info -->
+          <div v-if="notification.t_purchase_return.m_gudang" class="space-y-2">
+            <Separator />
+            <Label class="text-xs md:text-sm font-semibold"
+              >Alamat Gudang</Label
+            >
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <Label
+                  class="text-xs md:text-sm font-medium text-muted-foreground"
+                  >Alamat</Label
+                >
+                <p class="text-sm md:text-base">
+                  {{
+                    notification.t_purchase_return.m_gudang.alamat_gudang || "-"
+                  }}
+                </p>
+              </div>
+              <div class="space-y-1">
+                <Label
+                  class="text-xs md:text-sm font-medium text-muted-foreground"
+                  >Provinsi</Label
+                >
+                <p class="text-sm md:text-base">
+                  {{ notification.t_purchase_return.m_gudang.provinsi || "-" }}
+                </p>
+              </div>
+              <div class="space-y-1">
+                <Label
+                  class="text-xs md:text-sm font-medium text-muted-foreground"
+                  >Kota</Label
+                >
+                <p class="text-sm md:text-base">
+                  {{ notification.t_purchase_return.m_gudang.kota || "-" }}
+                </p>
+              </div>
+              <div class="space-y-1">
+                <Label
+                  class="text-xs md:text-sm font-medium text-muted-foreground"
+                  >Kecamatan</Label
+                >
+                <p class="text-sm md:text-base">
+                  {{ notification.t_purchase_return.m_gudang.kecamatan || "-" }}
+                </p>
+              </div>
+              <div class="space-y-1">
+                <Label
+                  class="text-xs md:text-sm font-medium text-muted-foreground"
+                  >Kode Pos</Label
+                >
+                <p class="text-sm md:text-base">
+                  {{ notification.t_purchase_return.m_gudang.kode_pos || "-" }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Catatan -->
+          <div v-if="notification.t_purchase_return.catatan" class="space-y-2">
+            <Separator />
+            <Label class="text-xs md:text-sm font-semibold"
+              >Catatan Purchase Return</Label
+            >
+            <div class="p-3 md:p-4 bg-muted rounded-md">
+              <p class="text-sm md:text-base">
+                {{ notification.t_purchase_return.catatan }}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Detail Tabs: Items -->
+      <Tabs
+        default-value="items"
+        class="w-full"
+        v-if="notification.t_purchase_return"
+      >
+        <TabsList class="w-full h-auto">
+          <TabsTrigger
+            value="items"
+            class="gap-1 md:gap-2 text-xs md:text-sm py-2"
+          >
+            <Package class="h-3 w-3 md:h-4 md:w-4" />
+            <span class="hidden xs:inline">Items</span> ({{ returnDetails.length }})
+          </TabsTrigger>
+        </TabsList>
+
+        <!-- TAB: DETAIL ITEMS -->
+        <TabsContent value="items" class="mt-4">
+          <Card>
+            <CardHeader class="p-4 md:p-6">
+              <CardTitle class="text-base md:text-lg flex items-center gap-2">
+                <Package class="h-5 w-5 shrink-0" />
+                Detail Items
+              </CardTitle>
+              <CardDescription class="text-xs md:text-sm">
+                Daftar item yang diretur ({{ returnDetails.length }} items)
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="p-4 md:p-6 pt-0 md:pt-0">
+              <div
+                v-if="returnDetails.length > 0"
+                class="overflow-x-auto -mx-4 md:-mx-6"
+              >
+                <div class="inline-block min-w-full align-middle">
+                  <Table>
+                    <TableHeader>
+                      <TableRow class="bg-muted/50">
+                        <TableHead class="min-w-[50px] text-center"
+                          >No</TableHead
+                        >
+                        <TableHead class="min-w-[120px]">Kode Item</TableHead>
+                        <TableHead class="min-w-[200px]">Nama Item</TableHead>
+                        <TableHead class="min-w-[150px]">
+                          {{ isPbReference ? "No PB" : "No PI" }}
+                        </TableHead>
+                        <TableHead v-if="!isPbReference" class="min-w-[150px]"
+                          >No PB</TableHead
+                        >
+                        <TableHead class="min-w-[140px]">No PO</TableHead>
+                        <TableHead class="min-w-[120px]">Rak</TableHead>
+                        <TableHead class="min-w-[80px] text-center"
+                          >Qty PB</TableHead
+                        >
+                        <TableHead
+                          v-if="!isPbReference"
+                          class="min-w-[80px] text-center"
+                          >Qty PI</TableHead
+                        >
+                        <TableHead class="min-w-[80px] text-center"
+                          >Qty Retur</TableHead
+                        >
+                        <TableHead class="min-w-[80px] text-center"
+                          >Satuan</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[120px] text-right"
+                          >Harga</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[100px] text-right"
+                          >Disc. 1 %</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[100px] text-right"
+                          >Disc. 2 %</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[120px] text-right"
+                          >Disc. Amount</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[120px] text-right"
+                          >Total Diskon</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[120px] text-right"
+                          >Subtotal</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[120px] text-right"
+                          >PPH</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[120px] text-right"
+                          >PPN</TableHead
+                        >
+                        <TableHead v-if="!isPbReference" class="min-w-[120px] text-right"
+                          >Grand Total</TableHead
+                        >
+                        <TableHead class="min-w-[150px]">Alasan</TableHead>
+                        <TableHead class="min-w-[150px]">Catatan</TableHead>
+                        <TableHead class="min-w-[120px] text-center"
+                          >Foto</TableHead
+                        >
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow
+                        v-for="(item, index) in returnDetails"
+                        :key="item.id"
+                        class="hover:bg-muted/30"
+                      >
+                        <TableCell class="text-center font-medium">{{
+                          index + 1
+                        }}</TableCell>
+                        <TableCell class="font-mono text-xs">{{
+                          item.kode_item || "-"
+                        }}</TableCell>
+                        <TableCell>
+                          <div class="font-medium">
+                            {{ item.nama_item || "-" }}
+                          </div>
+                        </TableCell>
+                        <TableCell class="font-mono text-xs">
+                          {{
+                            isPbReference
+                              ? item.no_penerimaan || item.no_pb || "-"
+                              : item.no_pi || "-"
+                          }}
+                        </TableCell>
+                        <TableCell v-if="!isPbReference" class="font-mono text-xs">
+                          {{ item.no_penerimaan || item.no_pb || "-" }}
+                        </TableCell>
+                        <TableCell class="font-mono text-xs">{{
+                          item.no_po || "-"
+                        }}</TableCell>
+                        <TableCell>{{ item.rak_display || "-" }}</TableCell>
+                        <TableCell class="text-center font-medium">{{
+                          formatNumber(item.qty_pb)
+                        }}</TableCell>
+                        <TableCell v-if="!isPbReference" class="text-center font-medium">{{
+                          formatNumber(item.qty_pi)
+                        }}</TableCell>
+                        <TableCell class="text-center font-bold text-primary">{{
+                          formatNumber(item.qty_retur)
+                        }}</TableCell>
+                        <TableCell class="text-center">{{
+                          item.satuan || "-"
+                        }}</TableCell>
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm"
+                          >{{ formatNumber(item.harga) }}</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm"
+                          >{{ formatNumber(item.disc_1_percent) }}%</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm"
+                          >{{ formatNumber(item.disc_2_percent) }}%</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm"
+                          >{{ formatNumber(item.disc_amount) }}</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm text-destructive"
+                          >{{ formatNumber(item.total_diskon) }}</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm"
+                          >{{ formatNumber(item.subtotal) }}</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm"
+                          >{{ formatNumber(item.pph) }}</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-mono text-sm"
+                          >{{ formatNumber(item.ppn) }}</TableCell
+                        >
+                        <TableCell
+                          v-if="!isPbReference"
+                          class="text-right font-bold font-mono"
+                          >{{ formatNumber(item.grand_total) }}</TableCell
+                        >
+                        <TableCell>
+                          <div class="text-xs">
+                            {{ getAlasanDisplay(item.alasan, item.alasan_id) }}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div class="text-xs">{{ item.catatan || "-" }}</div>
+                        </TableCell>
+                        <TableCell class="text-center">
+                          <Button
+                            v-if="item.bukti_foto"
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            class="gap-1.5 text-xs"
+                            @click="openFile(item.bukti_foto)"
+                          >
+                            <Eye class="h-3.5 w-3.5" />
+                            Lihat Foto
+                          </Button>
+                          <span v-else class="text-sm text-muted-foreground"
+                            >-</span
+                          >
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <div v-else class="text-center py-8 text-muted-foreground">
+                <Package class="h-12 w-12 mx-auto mb-2 opacity-20" />
+                <p class="text-sm">Tidak ada item</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <!-- Approval Info Card -->
+      <Card v-if="notification.menu_info">
+        <CardHeader class="p-4 md:p-6">
+          <CardTitle class="text-base md:text-lg flex items-center gap-2">
+            <AlertCircle class="h-5 w-5 shrink-0" />
+            Informasi Approval
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="p-4 md:p-6 pt-0 md:pt-0">
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 p-3 md:p-4 bg-primary/10 dark:bg-primary/10 rounded-md"
+          >
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Nama Approval</Label
+              >
+              <p class="text-sm md:text-base font-medium">
+                {{ notification.menu_info.approval_name }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Level</Label
+              >
+              <Badge variant="outline" class="text-xs"
+                >Level {{ notification.menu_info.level }}</Badge
+              >
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Menu</Label
+              >
+              <p class="text-sm md:text-base">
+                {{ notification.menu_info.menu_name }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label
+                class="text-xs md:text-sm font-medium text-muted-foreground"
+                >Path</Label
+              >
+              <p class="text-xs text-muted-foreground font-mono break-all">
+                {{ notification.menu_info.menu_path }}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Approval Section -->
+      <Card v-if="!notification.status" class="border-2 border-dashed">
+        <CardHeader class="p-4 md:p-6">
+          <CardTitle class="text-base md:text-lg flex items-center gap-2">
+            <Check class="h-5 w-5 text-primary shrink-0" />
+            Approval Action
+          </CardTitle>
+          <CardDescription class="text-xs md:text-sm"
+            >Berikan keputusan Anda</CardDescription
+          >
+        </CardHeader>
+        <CardContent class="p-4 md:p-6 pt-0 md:pt-0 space-y-4">
+          <FieldX
+            v-model="approvalCatatan"
+            type="textarea"
+            label="Catatan Approval"
+            placeholder="Masukkan catatan approval..."
+            hints="Catatan ini wajib diisi"
+            :rows="3"
+            :disabled="submitting"
+            :required="true"
+          />
+
+          <div
+            class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:justify-end pt-2 md:pt-4"
+          >
+            <Button
+              @click="handleReject"
+              variant="outline"
+              :disabled="submitting"
+              class="gap-2 w-full sm:w-auto border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <Ban class="h-4 w-4" />
+              Reject
+            </Button>
+            <Button
+              @click="() => handleApproval('REVISI')"
+              variant="destructive"
+              :disabled="submitting"
+              class="gap-2 w-full sm:w-auto"
+            >
+              <X class="h-4 w-4" />
+              Revisi
+            </Button>
+            <Button
+              @click="() => handleApproval('APPROVED')"
+              variant="default"
+              :disabled="submitting"
+              class="gap-2 w-full sm:w-auto"
+            >
+              <Check class="h-4 w-4" />
+              Approve
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Already Processed -->
+      <Card v-else class="border-primary/30 bg-primary/10">
+        <CardContent class="py-4 md:py-6">
+          <div
+            class="flex items-center justify-center gap-2 md:gap-3 text-primary"
+          >
+            <Check class="h-5 w-5 md:h-6 md:w-6" />
+            <span class="text-sm md:text-lg font-medium"
+              >Notifikasi ini sudah diproses</span
+            >
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    <!-- Image Preview Dialog -->
+    <Dialog :open="showPreviewDialog" @update:open="showPreviewDialog = $event">
+      <DialogContent
+        class="max-w-4xl w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col"
+      >
+        <DialogHeader class="p-3 md:p-4 border-b shrink-0">
+          <DialogTitle class="flex items-center gap-2 md:gap-3">
+            <span class="truncate flex-1 text-xs md:text-sm">{{
+              previewFileName
+            }}</span>
+            <div class="flex items-center gap-1 md:gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                class="gap-1 h-7 md:h-8 px-2"
+                @click="openPreviewInNewTab"
+              >
+                <ExternalLink class="h-3 w-3" />
+                <span class="hidden sm:inline text-xs">Buka</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                class="gap-1 h-7 md:h-8 px-2"
+                @click="downloadPreviewImage"
+              >
+                <Download class="h-3 w-3" />
+                <span class="hidden sm:inline text-xs">Unduh</span>
+              </Button>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        <div
+          class="flex-1 p-2 md:p-4 flex items-center justify-center bg-muted/50 overflow-auto min-h-0"
+        >
+          <img
+            :src="previewImageUrl"
+            :alt="previewFileName"
+            class="max-w-full max-h-[70vh] object-contain rounded-lg"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  </div>
+</template>
+
+<style scoped>
+/* Hide scrollbar but keep scrollable functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+</style>

@@ -1,0 +1,7 @@
+                    <PostButton 
+                        variant="default" 
+                        size="default"
+                        :showLabel="true"
+                        :disabled="!canEditOrDelete"
+                        @click="postSelected()"
+                    />

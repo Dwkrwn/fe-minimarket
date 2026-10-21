@@ -1,0 +1,65 @@
+// ============================================================================
+// POST FUNCTIONS
+// ============================================================================
+const postSelected = (item?: SuratJalanSubconItem) => {
+    if (!canUpdate.value) {
+        toast.error('Akses Ditolak', {
+            description: 'Anda tidak memiliki izin untuk mengubah data'
+        })
+        return
+    }
+
+    const targetItem = item || selectedItem.value
+    if (!targetItem) {
+        toast.error('Pilih item terlebih dahulu')
+        return
+    }
+
+    if (targetItem.status?.toUpperCase() === 'POST') {
+        toast.error('Item sudah di-POST', {
+            description: 'Data yang sudah POST tidak bisa diubah lagi'
+        })
+        return
+    }
+
+    itemToPost.value = targetItem
+    isPostDialogOpen.value = true
+}
+
+const confirmPost = async () => {
+    if (!itemToPost.value?.id) return
+
+    isPosting.value = true
+    try {
+        const response = await postSuratJalanSubcon(itemToPost.value.id)
+
+        if (response.status === 'success' || response.message === 'Data posted successfully') {
+            toast.success(`Surat Jalan Subcon "${itemToPost.value.no_sj_subcon || itemToPost.value.id}" berhasil di-POST`, {
+                description: 'Data tidak bisa diedit atau dihapus lagi'
+            })
+
+            const targetId = itemToPost.value.id
+            menuData.value = menuData.value.map(item =>
+                item.id === targetId ? { ...item, status: 'POST' } : item
+            )
+
+            deselectItem()
+            isPostDialogOpen.value = false
+        } else {
+            toast.error('Gagal POST Surat Jalan Subcon', {
+                description: response.message || response.error || 'Terjadi kesalahan saat POST'
+            })
+        }
+    } catch (error) {
+        toast.error('Gagal POST Surat Jalan Subcon', {
+            description: error instanceof Error ? error.message : 'Terjadi kesalahan sistem'
+        })
+    } finally {
+        isPosting.value = false
+    }
+}
+
+const cancelPost = () => {
+    isPostDialogOpen.value = false
+    itemToPost.value = null
+}

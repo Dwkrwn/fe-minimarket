@@ -1,0 +1,147 @@
+import { apiCall } from '@/lib/api'
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
+export interface [MODULE]Item {
+  id: string
+  group: string
+  key1: string
+  code: string
+  value1: string
+  value2: string
+  value3: string
+  value4: string
+  value5: string
+  is_active: boolean
+  createdAt: string
+  updatedAt: string
+  // Detail items (optional - only if module has details)
+  [module]_details?: any[]
+  [module]_details2?: any[]
+}
+
+export interface Pagination {
+  total: number
+  page: number
+  totalPages: number
+  limit: number
+  currentRowsCount: number
+  next_page: number | null
+  prev_page: number | null
+}
+
+export interface [MODULE]ListResponse {
+  status: string
+  data: [MODULE]Item[]
+  pagination: Pagination
+}
+
+// ============================================================================
+// API FUNCTIONS
+// ============================================================================
+
+/**
+ * Get all [module] data
+ * @param page - Page number (default: 1)
+ * @param paginate - Items per page (default: 10)
+ * @param order_by - Column to order by
+ * @param order_type - ASC or DESC
+ * @param search - Search term
+ * @param searchfield - Comma-separated fields to search in
+ * @returns Promise with [module] list
+ */
+export async function get[MODULE]List(
+  page: number = 1,
+  paginate: number = 10,
+  order_by: string = 'createdAt',
+  order_type: 'ASC' | 'DESC' = 'DESC',
+  search?: string,
+  searchfield?: string
+): Promise<[MODULE]ListResponse> {
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    paginate: paginate.toString(),
+    order_by,
+    order_type
+  })
+  
+  if (search && search.trim()) {
+    queryParams.append('search', search.trim())
+  }
+  
+  if (searchfield) {
+    queryParams.append('searchfield', searchfield)
+  }
+  
+  return apiCall<[MODULE]ListResponse>(`/dynamic/[endpoint]?${queryParams}`, {
+    method: 'GET'
+  })
+}
+
+/**
+ * Get [MODULE] by ID
+ * @param id - [MODULE] ID
+ * @returns Promise with [module] detail
+ */
+export async function get[MODULE]ById(id: string): Promise<{ status: string; data: [MODULE]Item }> {
+  return apiCall(`/dynamic/[endpoint]/${id}`, {
+    method: 'GET'
+  })
+}
+
+/**
+ * Create new [MODULE]
+ * @param data - [module] data
+ * @returns Promise with created [MODULE]
+ */
+export async function create[MODULE](data: Partial<[MODULE]Item>): Promise<{ status: string; data: [MODULE]Item }> {
+  // Check if data has detail items
+  const hasDetails = !!(data.[module]_details || data.[module]_details2)
+  const endpoint = hasDetails ? '/dynamic/[endpoint]/with-details' : '/dynamic/[endpoint]'
+  
+  return apiCall(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
+/**
+ * Update [MODULE]
+ * @param id - [MODULE] ID
+ * @param data - [module] data to update
+ * @returns Promise with updated [MODULE]
+ */
+export async function update[MODULE](id: string, data: Partial<[MODULE]Item>): Promise<{ status: string; data: [MODULE]Item }> {
+  // Check if data has detail items
+  const hasDetails = !!(data.[module]_details || data.[module]_details2)
+  const endpoint = hasDetails ? `/dynamic/[endpoint]/with-details/${id}` : `/dynamic/[endpoint]/${id}`
+  
+  return apiCall(endpoint, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  })
+}
+
+/**
+ * Delete [MODULE]
+ * @param id - [MODULE] ID
+ * @returns Promise with delete confirmation
+ */
+export async function delete[MODULE](id: string): Promise<{ status: string; message: string }> {
+  // Always use with-details endpoint for delete to handle cascade
+  return apiCall(`/dynamic/[endpoint]/with-details/${id}`, {
+    method: 'DELETE'
+  })
+}
+
+/**
+ * Get all [module] data without pagination (for sidebar)
+ * @returns Promise with [module] list
+ */
+export async function get[MODULE]ListNoPagination(): Promise<[MODULE]ListResponse> {
+  return apiCall<[MODULE]ListResponse>('/dynamic/[endpoint]?no_pagination=true', {
+    method: 'GET'
+  })
+}

@@ -1,0 +1,15 @@
+    <!-- ================================================================ -->
+    <!-- POST CONFIRMATION DIALOG -->
+    <!-- ================================================================ -->
+    <GlobalDialog
+        :open="isPostDialogOpen"
+        title="Post Surat Jalan Subcon"
+        :description="`Apakah Anda yakin ingin memposting Surat Jalan Subcon '${itemToPost?.no_sj_subcon || 'Tanpa Nomor'}'? Setelah diposting, data tidak dapat diubah atau dihapus.`"
+        type="warning"
+        confirm-text="Post"
+        cancel-text="Batal"
+        :is-loading="isPosting"
+        @confirm="confirmPost"
+        @cancel="cancelPost"
+        @update:open="isPostDialogOpen = $event"
+    />

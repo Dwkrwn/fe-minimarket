@@ -1,0 +1,698 @@
+<script setup lang="ts">
+// ============================================================================
+// IMPORTS
+// ============================================================================
+import { ref, reactive, onBeforeMount, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { toast } from 'vue-sonner'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import GlobalDialog from '@/components/dialog/GlobalDialog.vue'
+import { FieldX, FieldDate, FieldTextarea } from '@/components/field'
+import { ArrowLeft, Save, Loader2, Send } from 'lucide-vue-next'
+import { useApi } from '@/composables/useApi'
+import { useAuthStore } from '@/stores/auth'
+import {
+  create[MODULE],
+  update[MODULE],
+  get[MODULE]ById,
+} from './service'
+
+// ============================================================================
+// SETUP
+// ============================================================================
+const authStore = useAuthStore()
+const { API_BASE_URL } = useApi()
+const router = useRouter()
+const route = useRoute()
+
+// ============================================================================
+// STATE
+// ============================================================================
+const loading = ref(false)
+const isEditMode = computed(() => !!route.params.id && route.name === '[MODULE]Form')
+const isViewMode = computed(() => route.name === '[MODULE]View')
+const isCopyMode = computed(() => route.query.action === 'copy' && !!route.query.source)
+const menuId = computed(() => route.params.id as string)
+
+// Check if status is IN APPROVAL, APPROVED or REJECT - cannot edit or delete
+const isStatusLocked = computed(() => {
+  const status = values.status?.toUpperCase()
+  return status === 'IN APPROVAL' || status === 'APPROVED' || status === 'REJECT'
+})
+
+// Check if current user is Super Admin
+const isSuperAdmin = computed(() => {
+  const user = authStore.user
+  if (!user || !user.tipe) return false
+  return user.tipe.value1?.toUpperCase() === 'SUPER ADMIN'
+})
+
+// ReadOnly if view mode OR status is locked (IN APPROVAL/APPROVED/REJECT)
+// Exception: Super Admin can always edit
+const isReadOnly = computed(() => {
+  if (isSuperAdmin.value) return isViewMode.value || route.meta.readOnly === true
+  return isViewMode.value || route.meta.readOnly === true || isStatusLocked.value
+})
+
+// Check if status is REVISI - needs re-approval on save
+// Exception: Super Admin langsung APPROVED, tidak perlu re-approval
+const isRevisiStatus = computed(() => {
+  if (isSuperAdmin.value) return false // Super Admin bypass revisi flow
+  return values.status?.toUpperCase() === 'REVISI'
+})
+
+const pageTitle = computed(() => {
+  if (isViewMode.value) return 'Detail [MODULE_READABLE]'
+  if (isCopyMode.value) return 'Salin [MODULE_READABLE]'
+  if (isEditMode.value) return 'Edit [MODULE_READABLE]'
+  return 'Tambah [MODULE_READABLE] Baru'
+})
+
+const pageDescription = computed(() => {
+  if (isViewMode.value) return 'Lihat detail data [MODULE_READABLE]'
+  if (isCopyMode.value) return 'Buat [MODULE_READABLE] baru dari data yang disalin'
+  if (isEditMode.value) return 'Perbarui data [MODULE_READABLE]'
+  return 'Buat [MODULE_READABLE] baru'
+})
+
+// Form values with approval fields
+// NOTE: updated_by hanya diisi saat edit mode (PUT), tidak saat create
+let values = reactive({
+  tgl_[module]: new Date().toISOString().split('T')[0],
+  no_[module]: '',
+  catatan: '',
+  status: 'DRAFT',
+  req_type_user: authStore.user?.tipe?.value1 || '',
+  req_user_by: authStore.user?.name || '',
+  created_by: authStore.user?.id || ''
+})
+
+// Temp penampung data API mentah sebelum dimasukkan
+let initialValues: Record<string, any> = {}
+
+// REVISI Dialog State
+const isRevisiDialogOpen = ref(false)
+const approvalMessage = ref('')
+const approvalMessageError = ref('')
+
+// Super Admin confirmation dialog state
+const isSuperAdminDialogOpen = ref(false)
+
+// ============================================================================
+// AUTO SEND APPROVAL FUNCTION
+// ============================================================================
+const autoSendApproval = async (recordId: string, recordNo: string, message?: string) => {
+  try {
+    // Get approval data from localStorage
+    const approvalList = authStore.getApprovalList()
+    
+    if (!approvalList || approvalList.length === 0) {
+      throw new Error('Data approval tidak ditemukan. Silakan login ulang.')
+    }
+    
+    const currentApproval = approvalList.find((approval: any) => 
+      approval.path === '[route_path]' && 
+      approval.tipe_approve?.toUpperCase() === 'MENGAJUKAN'
+    )
+    
+    if (!currentApproval) {
+      throw new Error('Anda tidak memiliki hak untuk mengajukan approval pada halaman ini. Tipe approval yang dibutuhkan: MENGAJUKAN')
+    }
+    
+    // Validate required approval fields
+    if (currentApproval.level === null || currentApproval.level === undefined || !currentApproval.sender_id) {
+      throw new Error('Data approval tidak lengkap. Silakan hubungi administrator.')
+    }
+    
+    // Prepare payload
+    const payload = {
+      approval_level: currentApproval.level,
+      sender_id: currentApproval.sender_id,
+      [fk_column]: recordId, // e.g., t_purchase_request_id
+      approval_message: message?.trim() || null
+    }
+    
+    // Call API POST /dynamic/[notification_table]
+    const response = await fetch(
+      `${API_BASE_URL}/dynamic/[notification_table]`, // e.g., t_purchase_request_notifikasi
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authStore.token}`
+        },
+        body: JSON.stringify(payload)
+      }
+    )
+    
+    const result = await response.json()
+    
+    if (result.status === 'success') {
+      toast.success('Approval berhasil dikirim', {
+        description: `[MODULE_READABLE] "${recordNo}" telah dikirim untuk approval`
+      })
+    } else {
+      throw new Error(result.message || 'Terjadi kesalahan saat mengirim approval')
+    }
+  } catch (error) {
+    console.error('❌ Auto send approval error:', error)
+    throw error
+  }
+}
+
+const validateApprovalData = () => {
+  const approvalList = authStore.getApprovalList()
+  
+  if (!approvalList || approvalList.length === 0) {
+    return {
+      valid: false,
+      error: 'Data approval tidak ditemukan di sistem',
+      detail: 'Silakan logout dan login kembali untuk memuat ulang data approval Anda.'
+    }
+  }
+  
+  const currentApproval = approvalList.find((approval: any) => 
+    approval.path === '[route_path]' && 
+    approval.tipe_approve?.toUpperCase() === 'MENGAJUKAN'
+  )
+  
+  if (!currentApproval) {
+    return {
+      valid: false,
+      error: 'Hak akses approval tidak ditemukan',
+      detail: 'Anda tidak memiliki hak untuk mengajukan approval pada halaman [MODULE_READABLE]. Tipe approval yang dibutuhkan: MENGAJUKAN'
+    }
+  }
+  
+  const missingFields = []
+  if (currentApproval.level === null || currentApproval.level === undefined) missingFields.push('level')
+  if (!currentApproval.sender_id) missingFields.push('sender_id')
+  
+  if (missingFields.length > 0) {
+    return {
+      valid: false,
+      error: 'Data approval tidak lengkap',
+      detail: `Field yang kosong: ${missingFields.join(', ')}. Silakan hubungi administrator.`
+    }
+  }
+  
+  return { valid: true }
+}
+
+// ============================================================================
+// RESET FORM HANDLER
+// ============================================================================
+const onReset = () => {
+  Object.assign(values, {
+    tgl_[module]: new Date().toISOString().split('T')[0],
+    no_[module]: '',
+    catatan: '',
+    status: 'DRAFT',
+    req_type_user: authStore.user?.tipe?.value1 || '',
+    req_user_by: authStore.user?.name || '',
+    // NOTE: updated_by tidak diset saat reset - hanya diisi saat edit mode
+    created_by: authStore.user?.id || ''
+  })
+
+  Object.keys(errors).forEach(key => {
+    errors[key as keyof typeof errors] = ''
+  })
+}
+
+// ============================================================================
+// LIFECYCLE HOOKS - LOAD DATA BEFORE MOUNT
+// ============================================================================
+onBeforeMount(async () => {
+  onReset()
+
+  const isCopyModeLocal = route.query.action === 'copy' && route.query.source
+  const sourceId = isCopyModeLocal ? (route.query.source as string) : menuId.value
+
+  if ((isEditMode.value || isViewMode.value || isCopyModeLocal) && sourceId) {
+    loading.value = true
+    try {
+      const response = await get[MODULE]ById(sourceId)
+      initialValues = response.data
+
+      if (isCopyModeLocal) {
+        delete (initialValues as any).id
+        delete (initialValues as any).createdAt
+        delete (initialValues as any).updatedAt
+      }
+
+      for (const key in initialValues) {
+        if (Object.prototype.hasOwnProperty.call(values, key)) {
+          // @ts-ignore dynamic assign
+          values[key] = initialValues[key]
+        }
+      }
+
+      if (isCopyModeLocal) {
+        values.no_[module] = ''
+        values.status = 'DRAFT'
+        // Reset user fields to current user
+        values.req_type_user = authStore.user?.tipe?.value1 || ''
+        values.req_user_by = authStore.user?.name || ''
+        values.created_by = authStore.user?.id || ''
+        
+        toast.success('Data berhasil disalin', {
+          description: 'Silakan edit dan simpan sebagai [MODULE_READABLE] baru'
+        })
+      } else {
+        toast.success('Data berhasil dimuat')
+      }
+    } catch (error) {
+      toast.error('Gagal memuat data [MODULE_READABLE]', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+        action: {
+          label: 'Kembali',
+          onClick: () => router.push('[route_path]')
+        }
+      })
+    } finally {
+      loading.value = false
+    }
+  }
+})
+
+// Errors object (manual validation)
+const errors = reactive({
+  tgl_[module]: '',
+  no_[module]: ''
+})
+
+// ============================================================================
+// SAVE HANDLER
+// ============================================================================
+const onSave = async () => {
+  // Validasi required
+  Object.keys(errors).forEach(key => { errors[key as keyof typeof errors] = '' })
+  let invalid = false
+
+  if (!values.tgl_[module]?.trim()) {
+    errors.tgl_[module] = 'Tanggal wajib diisi'
+    invalid = true
+  }
+
+  if (invalid) {
+    toast.error('Validasi gagal', { description: 'Lengkapi field yang wajib diisi' })
+    return
+  }
+
+  // Check if Super Admin - show confirmation dialog first
+  if (isSuperAdmin.value) {
+    isSuperAdminDialogOpen.value = true
+    return
+  }
+
+  // Continue with normal save flow
+  await proceedWithSave()
+}
+
+// Proceed with save after Super Admin confirmation or for normal users
+const proceedWithSave = async () => {
+  // Check if editing REVISI status - show confirmation dialog
+  if (isEditMode.value && isRevisiStatus.value) {
+    // Validate approval data BEFORE showing dialog
+    const approvalValidation = validateApprovalData()
+    if (!approvalValidation.valid) {
+      toast.error(approvalValidation.error || 'Validasi approval gagal', {
+        description: approvalValidation.detail,
+        duration: 6000
+      })
+      return
+    }
+    
+    isRevisiDialogOpen.value = true
+    return
+  }
+
+  // Normal save flow
+  loading.value = true
+  try {
+    const payload = {
+      tgl_[module]: values.tgl_[module],
+      no_[module]: values.no_[module] || null,
+      catatan: values.catatan || null,
+      // Super Admin selalu APPROVED, user biasa sesuai status
+      status: isSuperAdmin.value ? 'APPROVED' : (values.status || 'DRAFT'),
+      req_type_user: values.req_type_user,
+      req_user_by: values.req_user_by,
+      // updated_by hanya diisi saat edit mode (PUT)
+      ...(isEditMode.value && { updated_by: authStore.user?.id || '' }),
+      created_by: authStore.user?.id || ''
+    }
+
+    if (isEditMode.value) {
+      await update[MODULE](menuId.value, payload as any)
+      toast.success('[MODULE_READABLE] berhasil diperbarui', {
+        description: isSuperAdmin.value 
+          ? `[MODULE_READABLE] "${values.no_[module]}" telah diperbarui dengan status APPROVED`
+          : `[MODULE_READABLE] "${values.no_[module]}" telah diperbarui`
+      })
+    } else {
+      await create[MODULE](payload as any)
+      toast.success('[MODULE_READABLE] berhasil dibuat', {
+        description: isSuperAdmin.value 
+          ? `[MODULE_READABLE] "${values.no_[module]}" telah dibuat dengan status APPROVED`
+          : `[MODULE_READABLE] "${values.no_[module]}" telah ditambahkan`
+      })
+    }
+    router.replace('[route_path]?reload=' + Date.now())
+  } catch (error) {
+    toast.error(isEditMode.value ? 'Gagal memperbarui [MODULE_READABLE]' : 'Gagal membuat [MODULE_READABLE]', {
+      description: error instanceof Error ? error.message : 'Terjadi kesalahan'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// ============================================================================
+// REVISI DIALOG HANDLERS
+// ============================================================================
+const cancelRevisiSave = () => {
+  isRevisiDialogOpen.value = false
+  approvalMessage.value = ''
+  approvalMessageError.value = ''
+}
+
+const confirmRevisiSave = async () => {
+  // Validate approval message is required
+  approvalMessageError.value = ''
+  if (!approvalMessage.value?.trim()) {
+    approvalMessageError.value = 'Pesan Approval wajib diisi'
+    return
+  }
+  
+  isRevisiDialogOpen.value = false
+  loading.value = true
+  
+  try {
+    // Build payload with status changed to IN APPROVAL
+    const payload = {
+      tgl_[module]: values.tgl_[module],
+      no_[module]: values.no_[module] || null,
+      catatan: values.catatan || null,
+      status: 'IN APPROVAL', // Change status to IN APPROVAL
+      req_type_user: values.req_type_user,
+      req_user_by: values.req_user_by,
+      updated_by: authStore.user?.id || '' // Revisi selalu edit mode jadi updated_by terisi
+    }
+
+    // Update the record
+    await update[MODULE](menuId.value, payload as any)
+    
+    // Send approval notification
+    await autoSendApproval(menuId.value, values.no_[module] || '', approvalMessage.value)
+    
+    toast.success('[MODULE_READABLE] berhasil diperbarui', {
+      description: `[MODULE_READABLE] "${values.no_[module]}" telah dikirim untuk approval`
+    })
+    
+    approvalMessage.value = ''
+    router.replace('[route_path]?reload=' + Date.now())
+  } catch (error) {
+    toast.error('Gagal memperbarui [MODULE_READABLE]', {
+      description: error instanceof Error ? error.message : 'Terjadi kesalahan'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// ============================================================================
+// SUPER ADMIN DIALOG HANDLERS
+// ============================================================================
+const confirmSuperAdminSave = async () => {
+  isSuperAdminDialogOpen.value = false
+  await proceedWithSave()
+}
+
+const cancelSuperAdminSave = () => {
+  isSuperAdminDialogOpen.value = false
+}
+
+// ============================================================================
+// CANCEL HANDLER
+// ============================================================================
+const handleCancel = () => {
+  router.push('[route_path]')
+}
+</script>
+
+<template>
+  <div class="p-6 space-y-6 mx-auto">
+    <!-- ================================================================ -->
+    <!-- HEADER SECTION -->
+    <!-- ================================================================ -->
+    <div class="flex items-center gap-4">
+      <Button variant="ghost" size="icon" @click="handleCancel">
+        <ArrowLeft class="h-5 w-5" />
+      </Button>
+      <div>
+        <h1 class="text-2xl font-bold text-foreground">
+          {{ pageTitle }}
+        </h1>
+        <p class="text-sm text-muted-foreground">
+          {{ pageDescription }}
+        </p>
+      </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- FORM SECTION -->
+    <!-- ================================================================ -->
+    <form class="space-y-6" @submit.prevent>
+      <!-- HEADER CARD -->
+      <Card>
+        <CardHeader>
+          <CardTitle>Informasi [MODULE_READABLE]</CardTitle>
+          <CardDescription>
+            Isi data [MODULE_READABLE] dengan lengkap dan benar
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-6">
+          <!-- Grid 2 Columns for Desktop -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- No [MODULE_READABLE] -->
+            <FieldX id="no_[module]" label="No [MODULE_READABLE]" v-model="values.no_[module]" 
+              :errorname="errors.no_[module] ? 'failed' : ''" :hints="errors.no_[module]" 
+              :required="!isReadOnly" :disabled="loading || isReadOnly"
+              :readonly="!isReadOnly" placeholder="Auto generate atau manual" />
+
+            <!-- Status (readonly, default DRAFT) -->
+            <FieldX id="status" label="Status" :value="values.status" :disabled="loading" :readonly="true"
+              placeholder="Status" hints="Status akan otomatis berubah sesuai proses approval" />
+
+            <!-- Tanggal -->
+            <FieldDate id="tgl_[module]" label="Tanggal [MODULE_READABLE]" v-model="values.tgl_[module]" 
+              :errorname="errors.tgl_[module] ? 'failed' : ''" :hints="errors.tgl_[module]" 
+              :required="!isReadOnly" :disabled="loading || isReadOnly"
+              :readonly="isReadOnly" placeholder="Pilih tanggal" />
+
+            <!-- Type User Request (readonly) -->
+            <FieldX id="req_type_user" label="Type User Request" v-model="values.req_type_user" :disabled="true"
+              :readonly="true" placeholder="Auto dari user login" />
+
+            <!-- User Request (readonly) -->
+            <FieldX id="req_user_by" label="User Request" v-model="values.req_user_by" :disabled="true"
+              :readonly="true" placeholder="Auto dari user login" />
+
+            <!-- Catatan (spanning 2 columns) -->
+            <div class="md:col-span-2">
+              <FieldTextarea id="catatan" label="Catatan" v-model="values.catatan" :disabled="loading || isReadOnly"
+                :readonly="isReadOnly" placeholder="Catatan tambahan untuk [MODULE_READABLE] ini" :rows="3" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- ================================================================ -->
+      <!-- ACTION BUTTONS -->
+      <!-- ================================================================ -->
+      <div
+        class="flex flex-col-reverse sm:flex-row items-center gap-3 sm:justify-end sticky bottom-0 bg-background/95 backdrop-blur py-4 border-t sm:border-0 -mx-6 px-6 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none sm:py-0 sm:static">
+        <Button type="button" variant="outline" @click="handleCancel" :disabled="loading" class="w-full sm:w-auto">
+          {{ isReadOnly ? 'Kembali' : 'Batal' }}
+        </Button>
+        <Button v-if="!isReadOnly" type="button" @click="onSave" :disabled="loading" class="gap-2 w-full sm:w-auto">
+          <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
+          <Save v-else class="h-4 w-4" />
+          {{ isEditMode ? 'Perbarui' : 'Simpan' }}
+        </Button>
+      </div>
+    </form>
+
+    <!-- ================================================================ -->
+    <!-- SUPER ADMIN CONFIRMATION DIALOG -->
+    <!-- ================================================================ -->
+    <Dialog :open="isSuperAdminDialogOpen" @update:open="isSuperAdminDialogOpen = $event">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2">
+            <span class="text-yellow-600">⚠️</span>
+            Konfirmasi Super Admin
+          </DialogTitle>
+          <DialogDescription>
+            Anda login sebagai <span class="font-semibold text-primary">SUPER ADMIN</span>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="py-4 space-y-4">
+          <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <p class="text-sm text-yellow-800 dark:text-yellow-200">
+              Data yang Anda {{ isEditMode ? 'perbarui' : 'buat' }} akan langsung memiliki status 
+              <span class="font-bold text-green-600 dark:text-green-400">APPROVED</span> 
+              tanpa melalui proses approval.
+            </p>
+          </div>
+
+          <div class="space-y-2 text-sm text-muted-foreground">
+            <p>Informasi:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2">
+              <li>Status akan langsung <span class="font-semibold text-green-600">APPROVED</span></li>
+              <li>Tidak perlu menunggu approval dari atasan</li>
+              <li>Data dapat langsung digunakan untuk proses selanjutnya</li>
+            </ul>
+          </div>
+        </div>
+
+        <DialogFooter class="gap-2">
+          <Button 
+            variant="outline"
+            @click="cancelSuperAdminSave"
+            :disabled="loading"
+          >
+            Batal
+          </Button>
+          <Button 
+            variant="default"
+            @click="confirmSuperAdminSave"
+            :disabled="loading"
+            class="gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Save class="h-4 w-4" />
+            <span>{{ loading ? 'Menyimpan...' : 'Ya, Simpan dengan APPROVED' }}</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- ================================================================ -->
+    <!-- REVISI CONFIRMATION DIALOG -->
+    <!-- ================================================================ -->
+    <Dialog :open="isRevisiDialogOpen" @update:open="isRevisiDialogOpen = $event">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Konfirmasi Penyimpanan</DialogTitle>
+          <DialogDescription>
+            Item ini memiliki status <span class="font-semibold text-yellow-600">REVISI</span>. 
+            Perubahan yang Anda simpan akan otomatis mengirim item ini ke proses approval kembali 
+            dan status akan berubah menjadi <span class="font-semibold text-blue-600">IN APPROVAL</span>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="py-4 space-y-4">
+          <!-- Information List -->
+          <div class="space-y-2 text-sm text-muted-foreground">
+            <p>Setelah menyimpan:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2">
+              <li>Perubahan data akan tersimpan</li>
+              <li>Status berubah menjadi IN APPROVAL</li>
+              <li>Notifikasi approval akan terkirim otomatis</li>
+            </ul>
+          </div>
+
+          <!-- Approval Message Field -->
+          <div class="border-t pt-4">
+            <FieldX 
+              id="approval-message"
+              type="textarea"
+              v-model="approvalMessage"
+              label="Pesan Approval"
+              placeholder="Masukkan pesan untuk approval"
+              :hints="approvalMessageError || 'Pesan ini akan dikirim ke penerima approval'"
+              :errorname="approvalMessageError ? 'failed' : ''"
+              :required="true"
+              :disabled="loading"
+              :rows="3"
+            />
+          </div>
+        </div>
+
+        <DialogFooter class="gap-2">
+          <Button 
+            variant="outline"
+            @click="cancelRevisiSave"
+            :disabled="loading"
+          >
+            Batal
+          </Button>
+          <Button 
+            variant="default"
+            @click="confirmRevisiSave"
+            :disabled="loading"
+            class="gap-2"
+          >
+            <Save class="h-4 w-4" />
+            <span>{{ loading ? 'Menyimpan...' : 'Simpan & Kirim Approval' }}</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
+</template>
+
+<style scoped>
+.required::after {
+  content: " *";
+  color: hsl(var(--destructive));
+}
+</style>
+
+<!--
+=============================================================================
+TEMPLATE PLACEHOLDERS - GANTI SESUAI MODULE
+=============================================================================
+
+[MODULE]           = Nama module PascalCase (e.g., TPurchaseRequest)
+[module]           = Nama module camelCase/snake (e.g., t_purchase_request, pr)
+[MODULE_READABLE]  = Nama module untuk display (e.g., Purchase Request)
+[route_path]       = Path route (e.g., /purchasing/transaksi/t_purchase_request)
+[fk_column]        = Foreign key column untuk notifikasi (e.g., t_purchase_request_id)
+[notification_table] = Table notifikasi (e.g., t_purchase_request_notifikasi)
+
+=============================================================================
+LOGIC SUMMARY
+=============================================================================
+
+1. STATUS LOCKED (IN APPROVAL, APPROVED, REJECT):
+   - Cannot edit or delete
+   - Form menjadi read-only
+   - Exception: Super Admin can always edit
+
+2. SUPER ADMIN:
+   - Bypass semua lock status
+   - Create/Edit langsung status APPROVED
+   - Show confirmation dialog sebelum save
+
+3. REVISI STATUS:
+   - Saat save, wajib input pesan approval
+   - Auto send notification ke approver
+   - Status berubah ke IN APPROVAL
+   - Exception: Super Admin langsung APPROVED, tidak perlu re-approval
+
+4. UPDATED_BY:
+   - Hanya diisi saat edit mode (PUT request)
+   - Tidak diisi saat create mode (POST request)
+   - Menggunakan conditional spread: ...(isEditMode.value && { updated_by: ... })
+
+5. COPY MODE:
+   - Reset semua ID
+   - Reset status ke DRAFT
+   - Reset user fields ke current user
+   - Tidak set updated_by karena mode create baru
+-->
