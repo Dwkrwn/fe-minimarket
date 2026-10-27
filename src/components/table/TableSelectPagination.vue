@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { Search, X } from 'lucide-vue-next'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -162,18 +162,18 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex flex-col h-full border rounded-md overflow-hidden bg-background">
+  <div class="flex flex-col h-full border border-border/80 rounded-2xl overflow-hidden bg-card shadow-sm">
     <!-- Toolbar -->
-    <div class="p-2 border-b flex gap-2">
+    <div class="p-3 border-b border-border/60 bg-muted/20 flex gap-2">
       <div class="relative flex-1">
-        <Search class="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <input v-model="searchQuery" type="text" placeholder="Search..."
-          class="w-full h-8 pl-8 pr-8 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+          class="w-full h-9 pl-9 pr-9 text-xs border border-border/80 rounded-xl bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200"
           @keydown.enter="onSearch" />
         <button v-if="searchQuery" type="button"
-          class="absolute right-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-white"
+          class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           @click="clearSearch">
-          <X class="h-4 w-4" />
+          <X class="h-3.5 w-3.5" />
         </button>
       </div>
       <!-- Optional: Refresh/Filter buttons -->
@@ -183,38 +183,38 @@ defineExpose({
     <div class="flex-1 overflow-auto">
       <Table>
         <TableHeader>
-          <TableRow class="hover:bg-transparent">
-            <TableHead class="w-12.5 text-center">No</TableHead>
-            <TableHead v-for="col in columns" :key="col.field" :style="{ width: col.width }" class="whitespace-nowrap">
+          <TableRow class="hover:bg-transparent border-b border-border/80">
+            <TableHead class="w-12.5 text-center font-bold text-xs uppercase tracking-wider text-muted-foreground">No</TableHead>
+            <TableHead v-for="col in columns" :key="col.field" :style="{ width: col.width }" class="whitespace-nowrap font-bold text-xs uppercase tracking-wider text-muted-foreground">
               {{ col.headerName }}
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <template v-if="loading">
-            <TableRow v-for="i in 5" :key="i">
+            <TableRow v-for="i in 5" :key="i" class="border-b border-border/60">
               <TableCell>
-                <Skeleton class="h-4 w-8 mx-auto" />
+                <Skeleton class="h-4 w-8 mx-auto rounded-lg" />
               </TableCell>
               <TableCell v-for="col in columns" :key="col.field">
-                <Skeleton class="h-4 w-full" />
+                <Skeleton class="h-4 w-full rounded-lg" />
               </TableCell>
             </TableRow>
           </template>
           <template v-else-if="data.length === 0">
             <TableRow>
-              <TableCell :colspan="columns.length + 1" class="text-center h-24 text-muted-foreground">
+              <TableCell :colspan="columns.length + 1" class="text-center h-24 text-muted-foreground text-xs">
                 No data found
               </TableCell>
             </TableRow>
           </template>
           <template v-else>
-            <TableRow v-for="(item, index) in data" :key="index" class="cursor-pointer hover:bg-muted/50"
+            <TableRow v-for="(item, index) in data" :key="index" class="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/60"
               @click="selectRow(item)">
-              <TableCell class="text-center">
+              <TableCell class="text-center font-mono text-xs text-muted-foreground">
                 {{ (currentPage - 1) * pageSize + index + 1 }}
               </TableCell>
-              <TableCell v-for="col in columns" :key="col.field">
+              <TableCell v-for="col in columns" :key="col.field" class="text-xs">
                 {{ col.render ? col.render(item) : item[col.field] }}
               </TableCell>
             </TableRow>
@@ -224,16 +224,16 @@ defineExpose({
     </div>
 
     <!-- Pagination -->
-    <div class="p-2 border-t flex justify-end">
+    <div class="p-3 border-t border-border/60 bg-muted/20 flex items-center justify-between">
+      <span class="text-xs text-muted-foreground">
+        Page <span class="font-semibold text-foreground">{{ currentPage }}</span> of <span class="font-semibold text-foreground">{{ totalPages }}</span>
+      </span>
       <div class="flex items-center space-x-2">
-        <button class="px-2 py-1 text-sm border rounded disabled:opacity-50" :disabled="currentPage <= 1 || loading"
+        <button class="px-3 py-1.5 text-xs font-medium rounded-xl border border-border/80 bg-background hover:bg-muted transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs" :disabled="currentPage <= 1 || loading"
           @click="onPageChange(currentPage - 1)">
           Prev
         </button>
-        <span class="text-sm">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button class="px-2 py-1 text-sm border rounded disabled:opacity-50"
+        <button class="px-3 py-1.5 text-xs font-medium rounded-xl border border-border/80 bg-background hover:bg-muted transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
           :disabled="currentPage >= totalPages || loading" @click="onPageChange(currentPage + 1)">
           Next
         </button>

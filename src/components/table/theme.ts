@@ -1,4 +1,4 @@
-import { themeQuartz } from 'ag-grid-community'
+﻿import { themeQuartz } from 'ag-grid-community'
 
 /**
  * AG Grid Theme Configuration
@@ -102,22 +102,24 @@ const hslToHex = (hslString: string): string => {
  */
 export const createDarkTheme = () => {
   const accentColor = getAccentColor()
-  const selectedBg = accentColor + '5a' // 35% opacity
+  const selectedBg = accentColor + '2e' // ~18% opacity
   
   return themeQuartz.withParams({
     accentColor: accentColor,
-    backgroundColor: "#000000",
+    backgroundColor: "#0d111c",
     browserColorScheme: "dark",
     chromeBackgroundColor: {
       ref: "foregroundColor",
-      mix: 0.07,
+      mix: 0.05,
       onto: "backgroundColor"
     },
-    columnBorder: true,
-    foregroundColor: "#FFF",
-    headerBackgroundColor: "#040404",
-    headerFontSize: 14,
-    oddRowBackgroundColor: "#101010",
+    columnBorder: false,
+    borderColor: "#1e293b",
+    foregroundColor: "#f8fafc",
+    headerBackgroundColor: "#111827",
+    headerTextColor: "#94a3b8",
+    headerFontSize: 12,
+    oddRowBackgroundColor: "#0f172a",
     selectedRowBackgroundColor: selectedBg
   })
 }
@@ -127,14 +129,19 @@ export const createDarkTheme = () => {
  */
 export const createLightTheme = () => {
   const accentColor = getAccentColor()
-  const selectedBg = accentColor + '40' // 25% opacity - more visible in light mode
+  const selectedBg = accentColor + '18' // ~10% soft tint
   
   return themeQuartz.withParams({
     accentColor: accentColor,
+    backgroundColor: "#ffffff",
     browserColorScheme: "light",
-    columnBorder: true,
-    headerFontSize: 14,
-    oddRowBackgroundColor: "#E9E9E9",
+    columnBorder: false,
+    borderColor: "#f1f5f9",
+    foregroundColor: "#1e293b",
+    headerBackgroundColor: "#f8fafc",
+    headerTextColor: "#64748b",
+    headerFontSize: 12,
+    oddRowBackgroundColor: "#fcfdff",
     selectedRowBackgroundColor: selectedBg
   })
 }
@@ -150,22 +157,24 @@ export const getGridTheme = (isDarkMode: boolean) => {
  * Create dark theme with specific accent color
  */
 export const createDarkThemeWithColor = (accentColor: string) => {
-  const selectedBg = accentColor + '5a' // 35% opacity
+  const selectedBg = accentColor + '2e'
   
   return themeQuartz.withParams({
     accentColor: accentColor,
-    backgroundColor: "#000000",
+    backgroundColor: "#0d111c",
     browserColorScheme: "dark",
     chromeBackgroundColor: {
       ref: "foregroundColor",
-      mix: 0.07,
+      mix: 0.05,
       onto: "backgroundColor"
     },
-    columnBorder: true,
-    foregroundColor: "#FFF",
-    headerBackgroundColor: "#040404",
-    headerFontSize: 14,
-    oddRowBackgroundColor: "#101010",
+    columnBorder: false,
+    borderColor: "#1e293b",
+    foregroundColor: "#f8fafc",
+    headerBackgroundColor: "#111827",
+    headerTextColor: "#94a3b8",
+    headerFontSize: 12,
+    oddRowBackgroundColor: "#0f172a",
     selectedRowBackgroundColor: selectedBg
   })
 }
@@ -174,14 +183,19 @@ export const createDarkThemeWithColor = (accentColor: string) => {
  * Create light theme with specific accent color
  */
 export const createLightThemeWithColor = (accentColor: string) => {
-  const selectedBg = accentColor + '40' // 25% opacity - more visible in light mode
+  const selectedBg = accentColor + '18'
   
   return themeQuartz.withParams({
     accentColor: accentColor,
+    backgroundColor: "#ffffff",
     browserColorScheme: "light",
-    columnBorder: true,
-    headerFontSize: 14,
-    oddRowBackgroundColor: "#E9E9E9",
+    columnBorder: false,
+    borderColor: "#f1f5f9",
+    foregroundColor: "#1e293b",
+    headerBackgroundColor: "#f8fafc",
+    headerTextColor: "#64748b",
+    headerFontSize: 12,
+    oddRowBackgroundColor: "#fcfdff",
     selectedRowBackgroundColor: selectedBg
   })
 }

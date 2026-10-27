@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { Component } from 'vue'
 import { ref, watch } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
@@ -75,16 +75,20 @@ const isParentOpen = (title: string) => {
 
 <template>
   <SidebarGroup>
-    <SidebarGroupLabel>Menu</SidebarGroupLabel>
+    <SidebarGroupLabel class="text-slate-400 font-bold uppercase tracking-wider text-[11px]">Menu</SidebarGroupLabel>
     <SidebarMenu>
       <template v-for="item in items" :key="item.title">
         <!-- Menu item without sub-items -->
         <SidebarMenuItem v-if="!item.items">
           <SidebarMenuButton :tooltip="item.title" :is-active="item.isActive" as-child>
-            <RouterLink :to="item.url" class="flex items-center gap-2">
+            <RouterLink 
+              :to="item.url" 
+              class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150"
+              :class="item.isActive ? 'bg-slate-100 text-slate-900 border-l-2 border-primary shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'"
+            >
               <component :is="item.icon" v-if="item.icon && typeof item.icon === 'string'" class="h-4 w-4 shrink-0" />
               <component :is="item.icon" v-else-if="item.icon" class="h-4 w-4 shrink-0" />
-              <span v-show="!isCollapsed">{{ item.title }}</span>
+              <span v-show="!isCollapsed" class="truncate">{{ item.title }}</span>
               <Badge v-if="item.badge && item.badge > 0 && !isCollapsed" variant="destructive" class="ml-auto h-5 min-w-5 px-1.5 text-xs">
                 {{ item.badge }}
               </Badge>
@@ -104,13 +108,16 @@ const isParentOpen = (title: string) => {
               <SidebarMenuButton 
                 :tooltip="item.title" 
                 @click="toggleParentMenu(item.title)"
+                class="rounded-xl px-3 py-2 text-xs transition-all duration-150"
                 :class="[
-                  item.isActive && 'bg-primary/10 text-primary font-semibold border-l-2 border-primary'
+                  item.isActive 
+                    ? 'bg-slate-100 text-slate-900 font-bold shadow-xs' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 ]"
               >
-                <component :is="item.icon" v-if="item.icon" class="shrink-0" :class="item.isActive && 'text-primary'" />
-                <span v-show="!isCollapsed">{{ item.title }}</span>
-                <ChevronRight v-show="!isCollapsed" class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" :class="item.isActive && 'text-primary'" />
+                <component :is="item.icon" v-if="item.icon" class="h-4 w-4 shrink-0" :class="item.isActive ? 'text-primary' : 'text-slate-500'" />
+                <span v-show="!isCollapsed" class="truncate font-medium">{{ item.title }}</span>
+                <ChevronRight v-show="!isCollapsed" class="ml-auto h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" :class="item.isActive ? 'text-primary' : 'text-slate-400'" />
               </SidebarMenuButton>
             </CollapsibleTrigger>
             <CollapsibleContent 
@@ -172,10 +179,18 @@ const isParentOpen = (title: string) => {
                       }
                     }"
                   >
-                    <SidebarMenuSubButton as-child :is-active="subItem.isActive">
-                      <RouterLink :to="subItem.url" class="flex items-center gap-2">
-                        <component :is="subItem.icon" v-if="subItem.icon" class="h-4 w-4 shrink-0" />
-                        <span>{{ subItem.title }}</span>
+                    <SidebarMenuSubButton as-child :is-active="subItem.isActive" class="rounded-xl text-xs transition-all duration-150">
+                      <RouterLink 
+                        :to="subItem.url" 
+                        class="flex items-center gap-2.5 py-1.5 px-2 rounded-xl transition-all duration-150 text-xs"
+                        :class="subItem.isActive ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 font-medium'"
+                      >
+                        <span 
+                          class="h-1.5 w-1.5 rounded-full shrink-0 transition-all duration-200" 
+                          :class="subItem.isActive ? 'bg-primary ring-2 ring-primary/30 scale-125' : 'bg-slate-300'" 
+                        />
+                        <component :is="subItem.icon" v-if="subItem.icon" class="h-3.5 w-3.5 shrink-0" :class="subItem.isActive ? 'text-primary' : 'text-slate-400'" />
+                        <span class="truncate">{{ subItem.title }}</span>
                       </RouterLink>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
@@ -253,10 +268,18 @@ const isParentOpen = (title: string) => {
                               }
                             }"
                           >
-                            <SidebarMenuSubButton as-child :is-active="nestedItem.isActive">
-                              <RouterLink :to="nestedItem.url" class="flex items-center gap-2">
-                                <component :is="nestedItem.icon" v-if="nestedItem.icon" class="h-4 w-4 shrink-0" />
-                                <span>{{ nestedItem.title }}</span>
+                            <SidebarMenuSubButton as-child :is-active="nestedItem.isActive" class="rounded-xl text-xs">
+                              <RouterLink 
+                                :to="nestedItem.url" 
+                                class="flex items-center gap-2 py-1.5 px-2 rounded-xl transition-all duration-150 text-xs"
+                                :class="nestedItem.isActive ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 font-medium'"
+                              >
+                                <span 
+                                  class="h-1 w-1 rounded-full shrink-0 transition-all duration-200" 
+                                  :class="nestedItem.isActive ? 'bg-primary ring-2 ring-primary/30' : 'bg-slate-300'" 
+                                />
+                                <component :is="nestedItem.icon" v-if="nestedItem.icon" class="h-3.5 w-3.5 shrink-0" :class="nestedItem.isActive ? 'text-primary' : 'text-slate-400'" />
+                                <span class="truncate">{{ nestedItem.title }}</span>
                               </RouterLink>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>

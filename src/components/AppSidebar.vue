@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { SidebarProps } from "@/components/ui/sidebar";
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -730,12 +730,12 @@ const formattedReleaseDate = appReleaseDate
       />
     </SidebarHeader>
 
-    <SidebarContent class="space-y-2">
+    <SidebarContent class="space-y-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800">
       <div class="px-3 py-2 group-data-[collapsible=icon]:px-2">
         <div class="relative flex items-center gap-2">
           <div class="relative flex-1">
             <Search
-              class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 group-data-[collapsible=icon]:left-2 pointer-events-none"
+              class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-data-[collapsible=icon]:left-2 pointer-events-none"
             />
             <Input
               v-model="searchQuery"
@@ -744,7 +744,7 @@ const formattedReleaseDate = appReleaseDate
                   ? 'Click to search...'
                   : 'Search menu...'
               "
-              class="pl-9 pr-9 h-9 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-blue-300 focus:ring-blue-200 shadow-sm group-data-[collapsible=icon]:pl-8 group-data-[collapsible=icon]:pr-8 group-data-[collapsible=icon]:cursor-pointer group-data-[collapsible=icon]:hover:bg-gray-50 group-data-[collapsible=icon]:hover:border-blue-200 transition-colors text-gray-800 dark:text-gray-100"
+              class="pl-9 pr-9 h-9.5 rounded-xl !bg-slate-50 !border-slate-200 !text-slate-800 placeholder:!text-slate-400 focus:!bg-white focus:!border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-xs group-data-[collapsible=icon]:pl-8 group-data-[collapsible=icon]:pr-8 group-data-[collapsible=icon]:cursor-pointer transition-all duration-200 text-xs"
               @focus="handleSearchFocus"
               @click="handleSearchFocus"
               :readonly="sidebar.state.value === 'collapsed'"
@@ -752,7 +752,7 @@ const formattedReleaseDate = appReleaseDate
             <button
               v-if="searchQuery"
               type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 group-data-[collapsible=icon]:right-2"
+              class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 group-data-[collapsible=icon]:right-2"
               aria-label="Clear search"
               @mousedown.prevent
               @click="searchQuery = ''"
@@ -771,7 +771,7 @@ const formattedReleaseDate = appReleaseDate
         <Button
           variant="outline"
           size="sm"
-          class="w-full justify-center gap-2 h-9 text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-blue-300 transition-colors mt-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+          class="w-full justify-center gap-2 h-9 rounded-xl text-xs font-semibold !text-slate-700 !border-slate-200 !bg-slate-50 hover:!bg-slate-100 hover:!text-slate-900 transition-all mt-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 shadow-xs"
           @click="handleRefreshMenu"
           :disabled="refreshing || loading"
         >
@@ -789,7 +789,7 @@ const formattedReleaseDate = appReleaseDate
           class="mt-2 px-1 group-data-[collapsible=icon]:hidden"
         >
           <div
-            class="text-xs text-white/80 bg-white/10 px-2 py-1 rounded backdrop-blur-sm"
+            class="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200"
           >
             {{ filteredMenuItems.length }} result{{
               filteredMenuItems.length !== 1 ? "s" : ""
@@ -814,7 +814,7 @@ const formattedReleaseDate = appReleaseDate
       <NavMain v-else :items="data.navMain" />
     </SidebarContent>
 
-    <SidebarFooter class="gap-2 pb-1">
+    <SidebarFooter class="gap-2 pb-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800 border-t border-slate-100">
       <div v-if="loading" class="px-3 py-2">
         <div class="flex items-center gap-2">
           <Skeleton class="h-8 w-8 rounded-full" />
@@ -828,7 +828,7 @@ const formattedReleaseDate = appReleaseDate
         <NavUser />
 
         <div
-          class="mt-auto rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-sidebar-foreground shadow-sm shadow-sidebar-border/20 transition-colors dark:bg-sidebar-accent/10 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-1.5"
+          class="mt-auto rounded-2xl !border-slate-200 !bg-slate-50 px-3 py-2 text-slate-800 transition-all duration-200 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-1.5 shadow-xs"
           :title="`ERP Version ${appVersion} • Release ${formattedReleaseDate}`"
         >
           <div

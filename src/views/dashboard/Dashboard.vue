@@ -235,21 +235,21 @@ onMounted(async () => {
 
 <template>
   <div class="flex-1 space-y-6 p-6 md:p-8 bg-background min-h-screen text-foreground transition-colors duration-200">
-    <!-- Header -->
+    <!-- Hero Header Banner (Droitdash SaaS elevated style) -->
     <div
-      class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-border/80 bg-gradient-to-r from-card via-card to-primary/5 shadow-xs"
       v-motion
       :initial="{ opacity: 0, y: -10 }"
       :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 15 } }"
     >
       <div>
-        <div class="flex items-center gap-2.5">
-          <div class="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+        <div class="flex items-center gap-3">
+          <div class="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
             <LayoutDashboard class="h-6 w-6" />
           </div>
           <div>
-            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{{ dashboardTitle }}</h1>
-            <p class="text-sm text-muted-foreground mt-0.5">{{ dashboardDesc }}</p>
+            <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">{{ dashboardTitle }}</h1>
+            <p class="text-xs md:text-sm text-muted-foreground mt-0.5">{{ dashboardDesc }}</p>
           </div>
         </div>
       </div>
@@ -257,12 +257,12 @@ onMounted(async () => {
       <!-- Controls & Switcher -->
       <div class="flex items-center gap-2 flex-wrap">
         <!-- Role Quick Switcher -->
-        <div v-if="roles.length > 0" class="flex items-center gap-1.5 bg-card border border-border rounded-lg px-3 py-1.5 shadow-xs">
-          <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role:</span>
+        <div v-if="roles.length > 0" class="flex items-center gap-2 bg-background/80 border border-border/80 rounded-2xl px-3.5 py-2 shadow-xs">
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Role:</span>
           <select
             v-model="selectedRoleId"
             @change="onRoleChange"
-            class="text-xs font-medium text-foreground bg-transparent focus:outline-none cursor-pointer"
+            class="text-xs font-semibold text-foreground bg-transparent focus:outline-none cursor-pointer"
           >
             <option value="all" class="bg-card text-foreground">🌐 Default (Semua Role)</option>
             <option v-for="r in roles" :key="r.id" :value="r.id" class="bg-card text-foreground">
@@ -275,7 +275,7 @@ onMounted(async () => {
         <button
           @click="refreshDashboard"
           :disabled="refreshing"
-          class="inline-flex items-center justify-center p-2 rounded-lg border border-border bg-card text-foreground hover:bg-muted transition-colors shadow-xs disabled:opacity-50"
+          class="inline-flex items-center justify-center p-2.5 rounded-2xl border border-border/80 bg-background/80 text-foreground hover:bg-muted/80 transition-all shadow-xs disabled:opacity-50"
           title="Segarkan Data"
         >
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': refreshing }" />
@@ -284,7 +284,7 @@ onMounted(async () => {
         <!-- Setting Dashboard Navigation Link -->
         <button
           @click="router.push('/setup/m_dashboard')"
-          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-sm font-medium transition-colors shadow-xs"
+          class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl border border-border/80 bg-background/80 hover:bg-muted/80 text-foreground text-xs font-semibold transition-all shadow-xs"
         >
           <Settings2 class="h-4 w-4 text-muted-foreground" />
           Setting Dashboard
@@ -295,27 +295,27 @@ onMounted(async () => {
     <!-- Loading Skeleton -->
     <div v-if="loading" class="space-y-6">
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div v-for="i in 4" :key="i" class="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <Skeleton class="h-4 w-28" />
-          <Skeleton class="h-8 w-20 mt-3" />
-          <Skeleton class="h-3 w-32 mt-2" />
+        <div v-for="i in 4" :key="i" class="rounded-2xl border border-border/80 bg-card p-6 shadow-xs">
+          <Skeleton class="h-4 w-28 rounded-lg" />
+          <Skeleton class="h-8 w-20 mt-3 rounded-lg" />
+          <Skeleton class="h-3 w-32 mt-2 rounded-lg" />
         </div>
       </div>
       <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-xl border border-border bg-card p-6 shadow-sm h-80">
-          <Skeleton class="h-6 w-40 mb-4" />
-          <Skeleton class="h-56 w-full rounded-lg" />
+        <div class="rounded-2xl border border-border/80 bg-card p-6 shadow-xs h-80">
+          <Skeleton class="h-6 w-40 mb-4 rounded-lg" />
+          <Skeleton class="h-56 w-full rounded-xl" />
         </div>
-        <div class="rounded-xl border border-border bg-card p-6 shadow-sm h-80">
-          <Skeleton class="h-6 w-40 mb-4" />
-          <Skeleton class="h-56 w-full rounded-lg" />
+        <div class="rounded-2xl border border-border/80 bg-card p-6 shadow-xs h-80">
+          <Skeleton class="h-6 w-40 mb-4 rounded-lg" />
+          <Skeleton class="h-56 w-full rounded-xl" />
         </div>
       </div>
     </div>
 
     <!-- Main Dynamic Dashboard Content -->
     <div v-else class="space-y-6">
-      <!-- 1. KPI Summary Cards Grid -->
+      <!-- 1. KPI Summary Cards Grid (Droitdash clean metric cards) -->
       <div v-if="kpiWidgets.length > 0" class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <div
           v-for="(w, idx) in kpiWidgets"
@@ -323,7 +323,7 @@ onMounted(async () => {
           v-motion
           :initial="{ opacity: 0, y: 15 }"
           :enter="{ opacity: 1, y: 0, transition: { delay: idx * 60 } }"
-          class="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-5 hover:shadow-md transition-all relative overflow-hidden group"
+          class="rounded-2xl border border-border/80 bg-card text-card-foreground shadow-xs p-6 hover:shadow-md transition-all relative overflow-hidden group"
           :class="{
             'hover:border-blue-500/50': w.color === 'blue',
             'hover:border-emerald-500/50': w.color === 'emerald',
@@ -332,10 +332,22 @@ onMounted(async () => {
             'hover:border-rose-500/50': w.color === 'rose',
           }"
         >
+          <!-- Top subtle ambient highlight line -->
+          <div
+            class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r"
+            :class="{
+              'from-blue-500 to-indigo-500': w.color === 'blue',
+              'from-emerald-500 to-teal-500': w.color === 'emerald',
+              'from-purple-500 to-pink-500': w.color === 'purple',
+              'from-amber-500 to-orange-500': w.color === 'amber',
+              'from-rose-500 to-red-500': w.color === 'rose',
+            }"
+          ></div>
+
           <div class="flex items-center justify-between">
-            <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{{ w.title }}</p>
+            <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">{{ w.title }}</p>
             <div
-              class="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs transition-transform group-hover:scale-110"
+              class="w-10 h-10 rounded-2xl flex items-center justify-center shadow-xs transition-transform group-hover:scale-110"
               :class="{
                 'bg-blue-500/10 text-blue-500 dark:bg-blue-500/20 dark:text-blue-400': w.color === 'blue',
                 'bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20 dark:text-emerald-400': w.color === 'emerald',
@@ -344,25 +356,26 @@ onMounted(async () => {
                 'bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 dark:text-rose-400': w.color === 'rose',
               }"
             >
-              <component :is="getKpiValueForMetric(w.metric).icon" class="h-4 w-4" />
+              <component :is="getKpiValueForMetric(w.metric).icon" class="h-5 w-5" />
             </div>
           </div>
-          <div class="mt-3">
-            <p class="text-2xl font-bold tracking-tight text-foreground">
+          <div class="mt-4">
+            <p class="text-3xl font-extrabold tracking-tight text-foreground font-mono">
               {{ formatNumber(getKpiValueForMetric(w.metric).value) }}
             </p>
-            <p class="text-xs mt-1 text-muted-foreground flex items-center gap-1.5">
-              <span class="text-emerald-500 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+            <div class="mt-2 flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                 <TrendingUp class="h-3 w-3" />
                 {{ getKpiValueForMetric(w.metric).change }}
               </span>
-            </p>
+              <span class="text-[11px] text-muted-foreground">vs minggu lalu</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 2. Dynamic Charts & Tables Grid -->
-      <div v-if="contentWidgets.length > 0" class="grid grid-cols-12 gap-4">
+      <div v-if="contentWidgets.length > 0" class="grid grid-cols-12 gap-5">
         <template v-for="(w, idx) in contentWidgets" :key="w.id || idx">
           <!-- Charts (Bar, Line, Doughnut, Pie, Area) -->
           <div
@@ -371,16 +384,16 @@ onMounted(async () => {
             v-motion
             :initial="{ opacity: 0, y: 20 }"
             :enter="{ opacity: 1, y: 0, transition: { delay: 150 + idx * 50 } }"
-            class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+            class="rounded-2xl border border-border/80 bg-card p-6 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
           >
             <div>
-              <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center justify-between mb-5">
                 <div>
-                  <h3 class="text-base font-bold text-foreground">{{ w.title }}</h3>
+                  <h3 class="text-base font-bold tracking-tight text-foreground">{{ w.title }}</h3>
                   <p v-if="w.subtitle" class="text-xs text-muted-foreground mt-0.5">{{ w.subtitle }}</p>
                 </div>
                 <div
-                  class="p-1.5 rounded-lg border border-border/50"
+                  class="p-2 rounded-xl border border-border/60"
                   :class="{
                     'bg-blue-500/10 text-blue-500 dark:text-blue-400': w.color === 'blue',
                     'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400': w.color === 'emerald',
@@ -410,21 +423,21 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Table Widget -->
+          <!-- Table Widget (Droitdash clean orders list style) -->
           <div
             v-else-if="w.type === 'table'"
             :class="`col-span-12 lg:col-span-${w.grid_span || 6}`"
             v-motion
             :initial="{ opacity: 0, y: 20 }"
             :enter="{ opacity: 1, y: 0, transition: { delay: 150 + idx * 50 } }"
-            class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow"
+            class="rounded-2xl border border-border/80 bg-card p-6 shadow-xs hover:shadow-md transition-shadow"
           >
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-5">
               <div>
-                <h3 class="text-base font-bold text-foreground">{{ w.title }}</h3>
+                <h3 class="text-base font-bold tracking-tight text-foreground">{{ w.title }}</h3>
                 <p v-if="w.subtitle" class="text-xs text-muted-foreground mt-0.5">{{ w.subtitle }}</p>
               </div>
-              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-muted text-foreground border border-border">
+              <span class="text-xs font-bold px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
                 Terbaru
               </span>
             </div>
@@ -432,35 +445,36 @@ onMounted(async () => {
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs">
                 <thead>
-                  <tr class="border-b border-border text-muted-foreground font-medium">
-                    <th class="pb-2.5">Nomor Referensi</th>
-                    <th class="pb-2.5">Keterangan / Relasi</th>
-                    <th class="pb-2.5 text-right">Status</th>
+                  <tr class="border-b border-border/80 text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
+                    <th class="pb-3 px-2">Nomor Referensi</th>
+                    <th class="pb-3 px-2">Keterangan / Relasi</th>
+                    <th class="pb-3 px-2 text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-border text-foreground">
+                <tbody class="divide-y divide-border/60 text-foreground">
                   <tr
                     v-for="(row, rIdx) in getTableDataForMetric(w.metric)"
                     :key="rIdx"
-                    class="hover:bg-muted/50 transition-colors"
+                    class="hover:bg-muted/30 transition-colors"
                   >
-                    <td class="py-3 font-semibold text-foreground">{{ row.no || row.no_po || '-' }}</td>
-                    <td class="py-3 text-muted-foreground">{{ row.customer_name || row.supplier_name || row.shift || '-' }}</td>
-                    <td class="py-3 text-right">
+                    <td class="py-3.5 px-2 font-mono font-bold text-primary">{{ row.no || row.no_po || '-' }}</td>
+                    <td class="py-3.5 px-2 text-muted-foreground font-medium">{{ row.customer_name || row.supplier_name || row.shift || '-' }}</td>
+                    <td class="py-3.5 px-2 text-right">
                       <span
-                        class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
                         :class="
-                          row.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-                          row.status === 'DRAFT' ? 'bg-muted text-muted-foreground border border-border' :
-                          'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          row.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' :
+                          row.status === 'DRAFT' ? 'bg-muted text-muted-foreground border border-border/80' :
+                          'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                         "
                       >
+                        <span class="h-1.5 w-1.5 rounded-full" :class="row.status === 'APPROVED' ? 'bg-emerald-500' : row.status === 'DRAFT' ? 'bg-muted-foreground' : 'bg-amber-500'" />
                         {{ row.status || 'DRAFT' }}
                       </span>
                     </td>
                   </tr>
                   <tr v-if="getTableDataForMetric(w.metric).length === 0">
-                    <td colspan="3" class="py-6 text-center text-muted-foreground">Tidak ada transaksi terkini</td>
+                    <td colspan="3" class="py-8 text-center text-muted-foreground">Tidak ada transaksi terkini</td>
                   </tr>
                 </tbody>
               </table>

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, nextTick, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
@@ -748,10 +748,10 @@ onMounted(async () => {
   >
     <div
       v-if="isOpen"
-      class="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-6 sm:w-[380px] sm:h-[600px] sm:max-h-[85vh] w-full h-[100dvh] bg-white dark:bg-gray-900 sm:rounded-2xl shadow-2xl border-0 sm:border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden z-[10000] origin-bottom sm:origin-bottom-right print:hidden"
+      class="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-6 sm:w-[400px] sm:h-[620px] sm:max-h-[85vh] w-full h-[100dvh] bg-card/95 backdrop-blur-2xl sm:rounded-3xl shadow-2xl border-0 sm:border border-border/80 flex flex-col overflow-hidden z-[10000] origin-bottom sm:origin-bottom-right print:hidden"
     >
       
-      <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 text-white flex items-center gap-3 shrink-0 shadow-sm z-10">
+      <div class="bg-gradient-to-r from-primary via-primary/95 to-primary/90 px-5 py-4 text-primary-foreground flex items-center gap-3 shrink-0 shadow-sm z-10">
         <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
           <MessageSquareMore class="w-5 h-5 text-white" />
         </div>
@@ -770,7 +770,7 @@ onMounted(async () => {
         </button>
       </div>
 
-      <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-gray-800/50">
+      <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20">
         <div v-for="msg in messages" :key="msg.id" class="flex flex-col max-w-[90%]" :class="msg.sender === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'">
           
           <div 
@@ -852,7 +852,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 z-10">
+      <div class="p-3.5 bg-card border-t border-border/80 z-10">
         
         <div v-if="isListening" class="flex items-center justify-center gap-2 text-red-500 text-xs font-semibold mb-2">
             <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-bounce"></span>
@@ -861,7 +861,7 @@ onMounted(async () => {
             <span>Mendengarkan... Silakan bicara.</span>
         </div>
 
-        <div class="flex items-end gap-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-[20px] p-1.5 pr-2">
+        <div class="flex items-end gap-1.5 bg-muted/40 border border-border/80 rounded-2xl p-1.5 pr-2 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
           
           <textarea
             ref="textareaRef"
@@ -895,7 +895,7 @@ onMounted(async () => {
           <button 
             @click="sendMessage(null)"
             :disabled="!userInput.trim() || isTyping"
-            class="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:dark:bg-gray-600 disabled:cursor-not-allowed transition shadow-sm flex-shrink-0"
+            class="mb-1 p-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-xs flex-shrink-0"
           >
             <Send class="w-5 h-5 ml-0.5" />
           </button>

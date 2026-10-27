@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -130,24 +130,33 @@ const handleLogout = async () => {
         <DropdownMenuTrigger as-child>
           <SidebarMenuButton
             size="lg"
-            class="hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-all duration-200"
+            class="h-auto p-2 rounded-2xl !bg-slate-50 !border-slate-200/90 hover:!bg-slate-100 hover:!border-slate-300 transition-all duration-200 group-data-[collapsible=icon]:p-1.5 shadow-xs !text-slate-800"
           >
-            <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-semibold">{{ displayName }}</span>
-              <span class="truncate text-xs opacity-80">{{
+            <Avatar class="h-8.5 w-8.5 rounded-xl border border-slate-200 bg-white shrink-0">
+              <AvatarImage
+                :src="selectedCompany.logo"
+                :alt="selectedCompany.name"
+              />
+              <AvatarFallback class="rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
+                {{ userInitials }}
+              </AvatarFallback>
+            </Avatar>
+            <div class="grid flex-1 text-left text-sm leading-tight ml-2 group-data-[collapsible=icon]:hidden">
+              <span class="truncate font-bold text-slate-900 text-sm tracking-tight">{{ displayName }}</span>
+              <span class="truncate text-xs text-slate-500 font-medium">{{
                 selectedCompany.nameRespo || "Bos Baut"
               }}</span>
             </div>
             <ChevronsUpDown
-              class="ml-auto size-4 opacity-60 group-hover:opacity-100 transition-opacity"
+              class="ml-auto size-4 text-slate-400 group-hover:text-slate-700 transition-colors group-data-[collapsible=icon]:hidden shrink-0"
             />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          class="w-[--reka-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+          class="w-[--reka-dropdown-menu-trigger-width] min-w-56 rounded-2xl p-1.5 shadow-xl border border-border/80"
           :side="isMobile ? 'bottom' : 'right'"
           align="end"
-          :side-offset="4"
+          :side-offset="6"
         >
           <DropdownMenuLabel class="p-0 font-normal">
             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">

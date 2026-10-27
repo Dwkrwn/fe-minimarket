@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, onMounted, watch, onUnmounted } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { SwatchBook, MessageSquare } from "lucide-vue-next";
@@ -347,184 +347,176 @@ watch(
   <SidebarProvider :default-open="true" ref="sidebarProvider">
     <AppSidebar />
     <SidebarInset class="overflow-hidden">
-      <!-- Topbar -->
+      <!-- Topbar (Droitdash SaaS Header) -->
       <header
-        class="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6"
+        class="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border/70 bg-background/85 backdrop-blur-xl px-6 transition-all duration-200"
       >
-        <SidebarTrigger />
-        <Separator orientation="vertical" class="h-6" />
+        <SidebarTrigger class="rounded-xl border border-border/60 hover:bg-card hover:border-border transition-all duration-200" />
+        <Separator orientation="vertical" class="h-6 opacity-60" />
 
         <div class="flex flex-1 items-center justify-between">
-          <div class="flex items-center gap-2">
-            <h1 class="text-lg font-semibold">{{ pageTitle }}</h1>
+          <div class="flex items-center gap-2.5">
+            <span class="h-2 w-2 rounded-full bg-primary ring-4 ring-primary/20 animate-pulse"></span>
+            <h1 class="text-xl font-bold tracking-tight text-foreground">{{ pageTitle }}</h1>
           </div>
 
-          <div class="flex items-center gap-2">
-            <!-- Notification Bell -->
-            <button
-              @click="goToNotifications"
-              class="group relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-primary/10 transition-all duration-200"
-              title="Notifications"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="text-muted-foreground group-hover:text-primary transition-all duration-300"
-                :class="{ 'animate-wiggle': notificationCount > 0 }"
+          <div class="flex items-center gap-2.5">
+            <!-- Controls Group Pill -->
+            <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-card border border-border/80 shadow-xs">
+              <!-- Notification Bell -->
+              <button
+                @click="goToNotifications"
+                class="group relative flex h-9 w-9 items-center justify-center rounded-xl hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200"
+                title="Notifications"
               >
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-              </svg>
-              <!-- Badge -->
-              <span
-                v-if="notificationCount > 0"
-                class="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
-              >
-                {{ notificationCount > 99 ? "99+" : notificationCount }}
-              </span>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="transition-all duration-300 group-hover:scale-110"
+                  :class="{ 'animate-wiggle text-primary': notificationCount > 0 }"
+                >
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                </svg>
+                <!-- Badge -->
+                <span
+                  v-if="notificationCount > 0"
+                  class="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow-xs animate-bounce"
+                >
+                  {{ notificationCount > 99 ? "99+" : notificationCount }}
+                </span>
+              </button>
 
-            <!-- Chatbot Button -->
-            <button
-              @click="toggleChat"
-              :class="[
-                'group relative flex h-9 w-9 items-center justify-center rounded-md transition-all duration-200 z-[10001]',
-                isOpen
-                  ? 'bg-blue-600 shadow-md shadow-blue-500/20' /* Menyala Biru Solid SAAT DIBUKA */
-                  : 'hover:bg-blue-500/20' /* Transparan SAAT DITUTUP */,
-              ]"
-              title="Chat Assistant"
-            >
-              <MessageSquare
+              <!-- Chatbot Button -->
+              <button
+                @click="toggleChat"
                 :class="[
-                  'h-[18px] w-[18px] transition-all duration-300',
+                  'group relative flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 z-[10001]',
                   isOpen
-                    ? 'text-white'
-                    : 'text-muted-foreground group-hover:text-blue-700',
+                    ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30 ring-2 ring-primary/40'
+                    : 'hover:bg-muted/80 text-muted-foreground hover:text-primary',
                 ]"
-              />
-            </button>
-            <!-- Theme Color Switcher -->
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <button
-                  class="group flex h-9 items-center gap-2 px-2 rounded-md hover:bg-primary/10 transition-all duration-200"
-                  title="Change Theme Color"
-                >
-                  <SwatchBook
-                    class="h-[18px] w-[18px] text-muted-foreground group-hover:text-primary transition-all duration-300"
-                  />
-                  <span
-                    class="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground group-hover:text-primary transition-all duration-300"
+                title="Chat Assistant"
+              >
+                <MessageSquare
+                  class="h-[18px] w-[18px] transition-all duration-300 group-hover:scale-110"
+                />
+              </button>
+
+              <!-- Theme Color Switcher -->
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <button
+                    class="group flex h-9 items-center gap-2 px-2.5 rounded-xl hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200"
+                    title="Change Theme Color"
                   >
+                    <SwatchBook
+                      class="h-[18px] w-[18px] transition-all duration-300 group-hover:scale-110"
+                    />
                     <span
-                      class="h-3 w-3 rounded-full border border-border shadow-sm"
-                      :style="{ backgroundColor: getCurrentThemeColor }"
-                    ></span>
-                    {{
-                      themes.find((t) => t.name === currentTheme)?.label ||
-                      "Default"
-                    }}
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="w-48 p-0">
-                <DropdownMenuLabel class="px-3 py-2"
-                  >Theme Color</DropdownMenuLabel
-                >
-                <DropdownMenuSeparator class="m-0" />
-                <div class="max-h-[168px] overflow-y-auto theme-scrollbar">
-                  <DropdownMenuRadioGroup :model-value="currentTheme">
-                    <DropdownMenuRadioItem
-                      v-for="theme in themes"
-                      :key="theme.name"
-                      :value="theme.name"
-                      @click="setColorTheme(theme.name)"
-                      class="flex items-center gap-2 cursor-pointer"
+                      class="hidden sm:flex items-center gap-1.5 text-xs font-medium"
                     >
                       <span
-                        class="h-4 w-4 rounded-full border border-border shadow-sm"
-                        :style="{ backgroundColor: theme.color }"
+                        class="h-3 w-3 rounded-full border border-border shadow-xs"
+                        :style="{ backgroundColor: getCurrentThemeColor }"
                       ></span>
-                      <span>{{ theme.label }}</span>
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                      {{
+                        themes.find((t) => t.name === currentTheme)?.label ||
+                        "Default"
+                      }}
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-48 p-1.5 rounded-2xl shadow-xl border border-border/80">
+                  <DropdownMenuLabel class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground"
+                    >Theme Color</DropdownMenuLabel
+                  >
+                  <DropdownMenuSeparator class="my-1" />
+                  <div class="max-h-[168px] overflow-y-auto theme-scrollbar space-y-0.5">
+                    <DropdownMenuRadioGroup :model-value="currentTheme">
+                      <DropdownMenuRadioItem
+                        v-for="theme in themes"
+                        :key="theme.name"
+                        :value="theme.name"
+                        @click="setColorTheme(theme.name)"
+                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl cursor-pointer text-xs font-medium transition-colors"
+                      >
+                        <span
+                          class="h-3.5 w-3.5 rounded-full border border-border shadow-xs shrink-0"
+                          :style="{ backgroundColor: theme.color }"
+                        ></span>
+                        <span>{{ theme.label }}</span>
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <!-- Dark/Light Mode Toggle -->
-            <button
-              @click="toggleTheme"
-              class="group flex h-9 w-9 items-center justify-center rounded-md hover:bg-primary/10 transition-all duration-200"
-              :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
-            >
-              <!-- Sun Icon (Light Mode) -->
-              <svg
-                v-if="!isDark"
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="text-muted-foreground group-hover:text-primary group-hover:rotate-45 transition-all duration-300"
+              <!-- Dark/Light Mode Toggle -->
+              <button
+                @click="toggleTheme"
+                class="group flex h-9 w-9 items-center justify-center rounded-xl hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200"
+                :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
               >
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 2v2" />
-                <path d="M12 20v2" />
-                <path d="m4.93 4.93 1.41 1.41" />
-                <path d="m17.66 17.66 1.41 1.41" />
-                <path d="M2 12h2" />
-                <path d="M20 12h2" />
-                <path d="m6.34 17.66-1.41 1.41" />
-                <path d="m19.07 4.93-1.41 1.41" />
-              </svg>
-
-              <!-- Moon Icon (Dark Mode) -->
-              <svg
-                v-else
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="text-muted-foreground group-hover:text-primary group-hover:rotate-[-15deg] transition-all duration-300"
-              >
-                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-              </svg>
-            </button>
-
-            <!-- Date & Time Display -->
-            <div class="hidden md:block w-px h-8 bg-primary/50"></div>
-            <div
-              class="hidden md:flex flex-col items-end text-right leading-tight"
-            >
-              <span class="text-xs font-medium text-foreground">{{
-                formattedDate
-              }}</span>
-              <div class="w-full h-px bg-primary/50 my-0.5"></div>
-              <div class="flex items-center gap-1">
-                <span class="text-xs text-muted-foreground"
-                  >{{ timeOfDay }},</span
+                <!-- Sun Icon (Light Mode) -->
+                <svg
+                  v-if="!isDark"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="group-hover:rotate-45 transition-transform duration-300"
                 >
-                <span class="text-xs font-mono text-primary font-medium">{{
-                  formattedTime
-                }}</span>
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2" />
+                  <path d="M12 20v2" />
+                  <path d="m4.93 4.93 1.41 1.41" />
+                  <path d="m17.66 17.66 1.41 1.41" />
+                  <path d="M2 12h2" />
+                  <path d="M20 12h2" />
+                  <path d="m6.34 17.66-1.41 1.41" />
+                  <path d="m19.07 4.93-1.41 1.41" />
+                </svg>
+
+                <!-- Moon Icon (Dark Mode) -->
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="group-hover:rotate-[-15deg] transition-transform duration-300"
+                >
+                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Date & Time Display Badge -->
+            <div
+              class="hidden lg:flex items-center gap-3 px-3.5 py-1.5 rounded-2xl bg-card border border-border/80 shadow-xs leading-tight"
+            >
+              <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <div class="flex flex-col text-right">
+                <span class="text-xs font-semibold text-foreground tracking-tight">{{ formattedDate }}</span>
+                <span class="text-[11px] font-mono text-muted-foreground">{{ timeOfDay }} &bull; {{ formattedTime }}</span>
               </div>
             </div>
           </div>
