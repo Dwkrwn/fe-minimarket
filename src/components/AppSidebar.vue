@@ -706,16 +706,16 @@ const data = computed(() => {
 });
 
 // App version (semantic versioning) injected from package.json at build time
-const appVersion = __APP_VERSION__;
-const appReleaseDate = __APP_RELEASE_DATE__;
-const appVersionCompact = `v${appVersion.split(".")[0] ?? appVersion}`;
-const formattedReleaseDate = appReleaseDate
-  ? new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(appReleaseDate))
-  : "-";
+// const appVersion = __APP_VERSION__;
+// const appReleaseDate = __APP_RELEASE_DATE__;
+// const appVersionCompact = `v${appVersion.split(".")[0] ?? appVersion}`;
+// const formattedReleaseDate = appReleaseDate
+//   ? new Intl.DateTimeFormat("id-ID", {
+//       day: "2-digit",
+//       month: "short",
+//       year: "numeric",
+//     }).format(new Date(appReleaseDate))
+//   : "-";
 </script>
 
 <template>
@@ -730,7 +730,9 @@ const formattedReleaseDate = appReleaseDate
       />
     </SidebarHeader>
 
-    <SidebarContent class="space-y-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800">
+    <SidebarContent
+      class="space-y-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800"
+    >
       <div class="px-3 py-2 group-data-[collapsible=icon]:px-2">
         <div class="relative flex items-center gap-2">
           <div class="relative flex-1">
@@ -814,7 +816,9 @@ const formattedReleaseDate = appReleaseDate
       <NavMain v-else :items="data.navMain" />
     </SidebarContent>
 
-    <SidebarFooter class="gap-2 pb-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800 border-t border-slate-100">
+    <SidebarFooter
+      class="gap-2 pb-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800 border-t border-slate-100"
+    >
       <div v-if="loading" class="px-3 py-2">
         <div class="flex items-center gap-2">
           <Skeleton class="h-8 w-8 rounded-full" />
@@ -827,7 +831,7 @@ const formattedReleaseDate = appReleaseDate
       <template v-else>
         <NavUser />
 
-        <div
+        <!-- <div
           class="mt-auto rounded-2xl !border-slate-200 !bg-slate-50 px-3 py-2 text-slate-800 transition-all duration-200 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-1.5 shadow-xs"
           :title="`ERP Version ${appVersion} • Release ${formattedReleaseDate}`"
         >
@@ -841,8 +845,8 @@ const formattedReleaseDate = appReleaseDate
               <p class="mt-0.5 text-[11px] font-medium text-sidebar-foreground/60">
                 Release {{ formattedReleaseDate }}
               </p>
-            </div>
-            <div
+            </div> -->
+        <!-- <div
               class="flex h-7 min-w-7 items-center justify-center rounded-md border border-sidebar-border bg-sidebar px-1.5 text-[10px] font-semibold text-sidebar-foreground shadow-sm shadow-sidebar-border/20"
             >
               <span class="group-data-[collapsible=icon]:hidden">
@@ -853,7 +857,7 @@ const formattedReleaseDate = appReleaseDate
               </span>
             </div>
           </div>
-        </div>
+        </div> -->
       </template>
     </SidebarFooter>
 
