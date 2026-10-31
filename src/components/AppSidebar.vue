@@ -87,46 +87,7 @@ const getModuleIcon = (moduleName: string): string => {
 
 const loadMenus = async (showToast = false) => {
   try {
-    if (authStore.isSuperAdmin) {
-      // SUPER ADMIN: Load all menus from API
-      const response = await getMenuListNoPagination();
-      if (response.status === "success") {
-        dynamicMenus.value = response.data
-          .filter((m) => m.is_active)
-          .sort((a, b) => {
-            const seqA = a.seq.split(".").map((n) => parseInt(n) || 0);
-            const seqB = b.seq.split(".").map((n) => parseInt(n) || 0);
-            for (let i = 0; i < Math.max(seqA.length, seqB.length); i++) {
-              const partA = seqA[i] || 0;
-              const partB = seqB[i] || 0;
-              if (partA !== partB) {
-                return partA - partB;
-              }
-            }
-            return 0;
-          });
-      }
-    } else {
-      // NON-SUPER ADMIN: Load menus from SelectRespo in localStorage
-      const selectRespoStr = localStorage.getItem("SelectRespo");
-      if (selectRespoStr) {
-        const selectRespo = JSON.parse(selectRespoStr);
-        if (selectRespo.menus && Array.isArray(selectRespo.menus)) {
-          dynamicMenus.value = selectRespo.menus.sort((a: any, b: any) => {
-            const seqA = a.seq.split(".").map((n: string) => parseInt(n) || 0);
-            const seqB = b.seq.split(".").map((n: string) => parseInt(n) || 0);
-            for (let i = 0; i < Math.max(seqA.length, seqB.length); i++) {
-              const partA = seqA[i] || 0;
-              const partB = seqB[i] || 0;
-              if (partA !== partB) {
-                return partA - partB;
-              }
-            }
-            return 0;
-          });
-        }
-      }
-    }
+    dynamicMenus.value = [...(authStore.user?.menus || [])].map(menu => ({ ...menu, desc: '', icon: menu.icon || '', modul: menu.modul || '', sub_modul: menu.sub_modul || '', is_active: true, createdAt: '', updatedAt: '' })).sort((a,b) => a.seq.localeCompare(b.seq, undefined, {numeric:true}));
 
     if (showToast || (!loading.value && refreshing.value)) {
       toast.success("Menu berhasil diperbarui", {
@@ -144,15 +105,23 @@ const loadMenus = async (showToast = false) => {
   }
 };
 
+const refreshSession = async () => {
+  try { await authStore.refreshUserData(); await loadMenus(); } catch { /* API layer handles expired sessions. */ }
+};
+let sessionInterval: ReturnType<typeof setInterval>;
+onMounted(() => { window.addEventListener('focus', refreshSession); sessionInterval = setInterval(refreshSession, 60000); });
+onUnmounted(() => { window.removeEventListener('focus', refreshSession); clearInterval(sessionInterval); });
+
 const handleRefreshMenu = async () => {
   refreshing.value = true;
+  await authStore.refreshUserData();
   await loadMenus(true);
   refreshing.value = false;
 };
 
 /** Fetch notification counts */
 const fetchNotificationCounts = async (forceRefresh = false) => {
-  if (isLoadingNotifications.value) return;
+  if (!authStore.user?.capabilities?.notifications || isLoadingNotifications.value) return;
 
   try {
     isLoadingNotifications.value = true;
@@ -591,7 +560,7 @@ const data = computed(() => {
   return {
     teams: [
       {
-        name: "Bos Baut",
+        name: "Mini Market",
         logo: "Building2",
         plan: "Enterprise",
       },

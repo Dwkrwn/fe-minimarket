@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { login, getUserDefault } from '@/lib/api'
+import { useAuthStore, type SessionUser } from '@/stores/auth'
+import { login, getCurrentUser } from '@/lib/api'
 import { toast } from 'vue-sonner'
 import { useApi } from '@/composables/useApi'
 import { Button } from '@/components/ui/button'
@@ -106,176 +106,18 @@ const handleLogin = async () => {
     })
 
     if (response.status === 'success' && response.token) {
-      // Step 2: Get user default data with full respo, role, and permission details
-      const userDefaultResponse = await getUserDefault(response.data.user.id, response.token)
-      
-      // Step 3: Validate user berdasarkan kondisi
-      // Jika BUKAN SUPER ADMIN dan TIDAK ADA user_details (respo) → CEGAH LOGIN
-      const userData = userDefaultResponse.data as any
-      const isSuperAdmin = userData.tipe?.value1?.toUpperCase() === 'SUPER ADMIN'
-      const hasUserDetails = Array.isArray(userData.user_details) && userData.user_details.length > 0
-      
-      if (!isSuperAdmin && !hasUserDetails) {
-        // User tidak punya respo dan bukan super admin → TOLAK LOGIN
+      // Login response may only contain basic user info, so fall back to /auth/me.
+      let userData = response.data.user as SessionUser
+      if (!userData?.role) {
+        userData = await getCurrentUser(response.token)
+      }
+      // Non-super-admin wajib punya role aktif
+      const isSuperAdmin = userData.role?.system_key === 'SUPER_ADMIN'
+      if (!isSuperAdmin && !userData.role?.id) {
         showWarningDialog.value = true
-        isLoading.value = false
         return
       }
-      
-      // Step 4: Pass complete data langsung dari API (sudah sesuai interface)
       authStore.login(response.token, userData)
-      
-      // Step 5: Fetch approval data from new API endpoint
-      try {
-        const approvalResponse = await fetch(
-          `${API_BASE_URL}/fn/m_approval/getUserApprovalData?id=${userData.id}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${response.token}`
-            }
-          }
-        )
-        
-        const approvalData = await approvalResponse.json()
-        
-        if (approvalData.status === 'success' && approvalData.menu && approvalData.menu.length > 0) {
-          // Transform approval data to ApprovalData format
-          const transformedList = approvalData.menu.flatMap((menuItem: any) => {
-            // Each menu item has syarat array - map each syarat to ApprovalData
-            return (menuItem.syarat || []).map((syarat: any) => {
-              // Extract modul and sub_modul from menu_path
-              const pathParts = menuItem.menu_path?.split('/').filter((p: string) => p) || []
-              const modul = pathParts[0]?.toUpperCase() || null
-              const subModul = pathParts[1]?.toUpperCase() || null
-              
-              return {
-                // m_approval id
-                id: menuItem.approval_id || null,
-
-                level: syarat.level,
-                // min_val/max_val now from header, fallback to syarat for compat
-                min_val: (menuItem.min_val ?? syarat.min_val) ?? null,
-                max_val: (menuItem.max_val ?? syarat.max_val) ?? null,
-                // max_disc: syarat.max_disc || null,           // moved to header
-                // max_disc_value: syarat.max_disc_value || null, // reserved
-                is_full: syarat.is_full || false,
-                is_use_limit: menuItem.is_use_limit ?? false,
-
-                // String properties
-                // top: null, // top_id belum ada value-nya di response - not used
-                tipe_approve: syarat.jenis_approval || null,
-                nama_approval: menuItem.approval_name || null,
-                nama_menu: menuItem.menu_name || null,
-                modul: modul,
-                sub_modul: subModul,
-                path: menuItem.menu_path || null,
-                
-                // Sender info
-                sender_id: syarat.user_default_id || approvalData.user?.id || null,
-                sender_name: approvalData.user?.name || null
-              }
-            })
-          })
-          
-          authStore.saveApprovalList(transformedList)
-        } else {
-          console.warn('No approval data found from API')
-          authStore.saveApprovalList([])
-        }
-      } catch (approvalErr) {
-        console.warn('Failed to fetch approval data:', approvalErr)
-        // Don't block login if approval fetch fails
-        authStore.saveApprovalList([])
-      }
-      
-      // Step 6: Restore SelectRespo jika ada saved respo ID
-      if (savedRespoId) {
-        // Cari apakah user masih punya akses ke respo yang sama
-        const userDetail = userData.user_details?.find(
-          (ud: any) => ud.m_respo_id === savedRespoId && ud.is_active
-        )
-        
-        if (userDetail?.m_respo) {
-          // User masih punya akses ke respo yang sama, restore SelectRespo
-          // Extract permissions dari respo ini
-          const permissions: Record<string, {
-            is_read: boolean
-            is_create: boolean
-            is_update: boolean
-            is_delete: boolean
-            is_print: boolean
-          }> = {}
-          
-          const menuMap = new Map<string, any>()
-          
-          userDetail.m_respo.m_respo_ds?.forEach((respoDetail: any) => {
-            if (!respoDetail.is_active || !respoDetail.m_role?.is_active) return
-            
-            respoDetail.m_role.m_role_ds?.forEach((roleDetail: any) => {
-              const menuId = roleDetail.m_menu_id
-              
-              // Store menu data
-              if (roleDetail.m_menu && !menuMap.has(menuId)) {
-                menuMap.set(menuId, {
-                  id: roleDetail.m_menu.id,
-                  name: roleDetail.m_menu.name,
-                  path: roleDetail.m_menu.path,
-                  icon: roleDetail.m_menu.icon,
-                  seq: roleDetail.m_menu.seq,
-                  modul: roleDetail.m_menu.modul
-                })
-              }
-              
-              // Merge permissions
-              if (permissions[menuId]) {
-                permissions[menuId].is_read = permissions[menuId].is_read || roleDetail.is_read
-                permissions[menuId].is_create = permissions[menuId].is_create || roleDetail.is_create
-                permissions[menuId].is_update = permissions[menuId].is_update || roleDetail.is_update
-                permissions[menuId].is_delete = permissions[menuId].is_delete || roleDetail.is_delete
-                permissions[menuId].is_print = permissions[menuId].is_print || roleDetail.is_print
-              } else {
-                permissions[menuId] = {
-                  is_read: roleDetail.is_read,
-                  is_create: roleDetail.is_create,
-                  is_update: roleDetail.is_update,
-                  is_delete: roleDetail.is_delete,
-                  is_print: roleDetail.is_print
-                }
-              }
-            })
-          })
-          
-          const selectRespoData = {
-            respoId: userDetail.id,
-            respoName: userDetail.m_respo.nama,
-            isPrimary: userDetail.is_primary,
-            companyId: userDetail.m_respo.unit_bisnis?.id || null,
-            companyName: userDetail.m_respo.unit_bisnis?.nama_comp || null,
-            unitBisnisName: userDetail.m_respo.unit_bisnis?.nama_comp || null,
-            companyLegalId: userDetail.m_respo.unit_bisnis?.m_company?.id || null,
-            companyLegalName: userDetail.m_respo.unit_bisnis?.m_company?.nama || null,
-            companyLogo: userDetail.m_respo.unit_bisnis?.m_company?.logo_img || null,
-            gudangId: (userDetail.m_respo as any).m_gudang_id || null,
-            menus: Array.from(menuMap.values()),
-            permissions
-          }
-          
-          localStorage.setItem('SelectRespo', JSON.stringify(selectRespoData))
-        } else {
-          // User sudah tidak punya akses ke respo tersebut, use default
-          authStore.initializeSelectRespo()
-        }
-      } else {
-        // Tidak ada saved respo, use default
-        authStore.initializeSelectRespo()
-      }
-      
-      // Reset saved respo ID
-      const restoredRespoId = savedRespoId
-      savedRespoId = null
-      
       // Step 7: Show success message
       toast.success('Session Diperbaharui!', {
         description: `Selamat datang kembali, ${userData.name}`
@@ -412,12 +254,12 @@ const redirectToLogin = () => {
     </DialogContent>
   </Dialog>
 
-  <!-- Warning Dialog - User tidak punya respo -->
+  <!-- Warning Dialog - User tidak punya role -->
   <GlobalDialog
     :open="showWarningDialog"
     type="warning"
     title="Akses Ditolak"
-    description="User yang Anda pilih belum dikonfigurasi untuk RESPONSIBILITY/RESPO. Silakan hubungi administrator anda untuk mengatur respo terlebih dahulu."
+    description="User yang Anda pilih belum dikonfigurasi untuk ROLE. Silakan hubungi administrator anda untuk mengatur role terlebih dahulu."
     confirmText="Ok"
     :show-cancel="false"
     @confirm="handleWarningConfirm"

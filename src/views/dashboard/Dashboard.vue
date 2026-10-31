@@ -49,7 +49,7 @@ const contentWidgets = computed(() => widgets.value.filter(w => w.type !== 'kpi'
 async function loadDashboardConfig(roleId?: string | null) {
   try {
     const targetRoleId = roleId && roleId !== 'all' ? roleId : null
-    const record = await dashboardService.fetchConfig(targetRoleId)
+    const record = authStore.user?.capabilities?.dashboard ? await dashboardService.fetchConfig(targetRoleId) : null
 
     if (record && Array.isArray(record.config) && record.config.length > 0) {
       dashboardTitle.value = record.nama_dashboard || 'Dashboard'
@@ -69,6 +69,7 @@ async function loadDashboardConfig(roleId?: string | null) {
 
 // Fetch live metrics
 async function loadMetrics() {
+  if (!authStore.user?.capabilities?.dashboard) return
   try {
     metricsData.value = await dashboardService.fetchMetrics()
   } catch (err) {
@@ -210,10 +211,11 @@ onMounted(async () => {
   loading.value = true
   try {
     // 1. Load roles
-    roles.value = await dashboardService.fetchRoles()
+    roles.value = authStore.isManager ? await dashboardService.fetchRoles().catch(() => []) : []
 
     // 2. Identify user role
     const user = authStore.currentUser
+    if (user?.role) selectedRoleId.value = user.role.id
     if (user && user.user_details && user.user_details.length > 0) {
       const firstRespo = user.user_details[0]?.m_respo
       const firstRole = firstRespo?.m_respo_ds?.[0]?.m_role_id

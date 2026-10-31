@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 type HeaderField = {
   label: string;
   value: string;
@@ -46,7 +46,7 @@ const props = withDefaults(
     footerLeft: "",
     footerRight: "",
     emptyText: "Tidak ada item",
-    logoSrc: "/hutomoLogoHitam.png",
+    logoSrc: "/miniMarketLogo.png",
     logoAlt: "Logo",
   },
 );

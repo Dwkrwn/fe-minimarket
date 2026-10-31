@@ -30,7 +30,8 @@ const loading = ref(false)
 const isEditMode = computed(() => !!route.params.id && route.name === 'UserDefaultForm')
 const isViewMode = computed(() => route.name === 'UserDefaultView')
 const isCopyMode = computed(() => route.query.action === 'copy' && !!route.query.source)
-const isReadOnly = computed(() => isViewMode.value || route.meta.readOnly === true)
+const protectedAccount = ref(false)
+const isReadOnly = computed(() => isViewMode.value || route.meta.readOnly === true || protectedAccount.value)
 const menuId = computed(() => route.params.id as string)
 const pageTitle = computed(() => {
   if (isViewMode.value) return 'Detail UserDefault'
@@ -61,9 +62,9 @@ let values = reactive({
 let initialValues: Record<string, any> = {}
 
 // Simpan password hash dari API (untuk dikirim kembali jika tidak diubah)
-let originalPasswordHash = ref<string>('')
 
-// Detail array untuk user_details (respo)
+
+// Detail array untuk user_details (role)
 const detailArr = ref<UserDetailItem[]>([])
 
 // Computed: IDs dari detail yang sudah ditambahkan
@@ -146,7 +147,7 @@ const onReset = () => {
   })
 
   // Reset password hash
-  originalPasswordHash.value = ''
+
 
   // Reset detail array
   detailArr.value = []
@@ -162,6 +163,9 @@ const onReset = () => {
 // ============================================================================
 
 const onDetailAdd = async (items: any[]) => {
+  if (items.length !== 1) { toast.error('Pilih tepat satu role untuk akun ini'); return }
+  detailArr.value = []
+
 
   const hasPrimary = detailArr.value.some(detail => detail.is_primary === true)
 
@@ -179,7 +183,7 @@ const onDetailAdd = async (items: any[]) => {
     detailArr.value.push(detail)
   })
 
-  toast.success(`${items.length} respo ditambahkan`)
+  toast.success(`${items.length} role ditambahkan`)
 }
 const removeDetail = (index: number) => {
   if (index < 0 || index >= detailArr.value.length) return
@@ -221,6 +225,7 @@ onBeforeMount(async () => {
 
     if (res.status !== 'success') throw new Error('Gagal memuat data')
     initialValues = res.data
+    protectedAccount.value = !isCopyModeLocal && !authStore.isSuperAdmin && res.data.role?.system_key === 'SUPER_ADMIN'
 
     // Minimal normalisasi (tidak sekompleks normalizeIncoming sebelumnya)
     // Pastikan boolean (API sudah boolean, tapi jaga-jaga kalau 1/0)
@@ -240,7 +245,7 @@ onBeforeMount(async () => {
       delete (initialValues as any).password
     } else {
       // Simpan password hash asli untuk dikirim kembali jika tidak diubah
-      originalPasswordHash.value = initialValues.password || ''
+
     }
 
     // Assign hanya key yang sudah ada di state reactive values
@@ -333,12 +338,15 @@ const onSave = async () => {
     return
   }
 
+  if (detailArr.value.length !== 1 || detailArr.value[0]?.is_active === false) {
+    toast.error('Pilih satu role aktif untuk akun ini'); return
+  }
   // Validasi detail: jika ada detail, minimal harus ada 1 primary
   if (detailArr.value.length > 0) {
     const hasPrimary = detailArr.value.some(detail => detail.is_primary === true)
     if (!hasPrimary) {
       toast.error('Validasi gagal', {
-        description: 'Minimal harus ada satu respo yang ditandai sebagai Primary'
+        description: 'Minimal harus ada satu role yang ditandai sebagai Primary'
       })
       return
     }
@@ -362,7 +370,7 @@ const onSave = async () => {
     //   * Jika user tidak mengisi → jangan kirim field password sama sekali
     if (values.password?.trim()) {
       // User mengisi password baru (create atau edit)
-      payload.password = values.password.trim()
+      payload.password = values.password
     } else if (!isEditMode.value) {
       // Create mode dan password kosong (sudah dicegah di validasi)
       payload.password = null
@@ -379,10 +387,6 @@ const onSave = async () => {
       }))
     }
 
-    console.log('=== DEBUG SAVE ===')
-    console.log('Has details:', hasDetails)
-    console.log('Payload:', payload)
-    console.log('====================')
 
     if (isEditMode.value) {
       await updateUserDefault(menuId.value, payload as any, hasDetails)
@@ -582,33 +586,34 @@ const handleCancel = () => {
       <!-- ================================================================ -->
       <Card>
         <CardHeader>
-          <CardTitle>Detail Respo</CardTitle>
+          <CardTitle>Detail Role</CardTitle>
           <p class="text-sm text-muted-foreground">
-            {{ isReadOnly ? 'Respo yang terkait dengan user ini' : 'Pilih respo yang terkait dengan user ini' }}
+            {{ isReadOnly ? 'Role yang terkait dengan user ini' : 'Pilih role yang terkait dengan user ini' }}
           </p>
         </CardHeader>
         <CardContent class="space-y-4">
           <!-- Button Multi Select - Hidden in view mode -->
           <div v-if="!isReadOnly">
-            <ButtonMultiSelect title="Pilih Respo" @add="onDetailAdd" :excludeIds="selectedRespoIds" :api="{
-              url: `${API_BASE_URL}/dynamic/m_respo`,
+            <ButtonMultiSelect title="Pilih Role" @add="onDetailAdd" :excludeIds="selectedRespoIds" :api="{
+              url: `${API_BASE_URL}/dynamic/m_role`,
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authStore.token}`
               },
               params: {
-                include: 'm_respo_d,m_unit_bisnis',
-                searchfield: 'nama,catatan',
+                no_pagination: true,
+                searchfield: 'nama_role,catatan',
                 filter_column_is_active: true
               },
               onsuccess: (response: any) => {
+                response.data = (response.data || []).filter((role: any) => role.is_active && (authStore.isSuperAdmin || role.system_key !== 'SUPER_ADMIN')).map((role: any) => ({ ...role, nama: role.nama_role }))
                 response.hasNext = response.pagination?.next_page ? true : false
                 return response
               }
             }" :columns="[
                 {
                   field: 'nama',
-                  headerName: 'Nama Respo',
+                  headerName: 'Nama Role',
                   flex: 1,
                   sortable: true,
                   filterable: true
@@ -637,7 +642,7 @@ const handleCancel = () => {
               <thead class="bg-muted">
                 <tr>
                   <th class="px-3 py-2 text-left font-medium text-xs sm:text-sm">No</th>
-                  <th class="px-3 py-2 text-left font-medium text-xs sm:text-sm">Respo</th>
+                  <th class="px-3 py-2 text-left font-medium text-xs sm:text-sm">Role</th>
                   <th class="px-2 py-2 text-center font-medium text-xs sm:text-sm">Primary</th>
                   <th class="px-2 py-2 text-center font-medium text-xs sm:text-sm">Active</th>
                   <th class="px-2 py-2 text-center font-medium text-xs sm:text-sm">Aksi</th>
@@ -647,8 +652,8 @@ const handleCancel = () => {
                 <!-- Empty State -->
                 <tr v-if="detailArr.length === 0">
                   <td colspan="5" class="text-center py-8 text-muted-foreground text-xs sm:text-sm">
-                    <p>{{ isReadOnly ? 'Tidak ada respo terkait' : 'Belum ada respo dipilih' }}</p>
-                    <p v-if="!isReadOnly" class="text-xs mt-1">Klik tombol "Pilih Respo" untuk menambahkan</p>
+                    <p>{{ isReadOnly ? 'Tidak ada role terkait' : 'Belum ada role dipilih' }}</p>
+                    <p v-if="!isReadOnly" class="text-xs mt-1">Klik tombol "Pilih Role" untuk menambahkan</p>
                   </td>
                 </tr>
 
@@ -671,7 +676,7 @@ const handleCancel = () => {
                         if (!otherPrimary) {
                           // Jika tidak ada primary lain, batalkan uncheck
                           detail.is_primary = true
-                          toast.warning('Minimal satu respo harus menjadi Primary')
+                          toast.warning('Minimal satu role harus menjadi Primary')
                         }
                       }
                     }" class="rounded cursor-pointer" />

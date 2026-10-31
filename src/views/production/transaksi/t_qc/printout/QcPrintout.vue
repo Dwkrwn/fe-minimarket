@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { toast } from "vue-sonner";
@@ -17,7 +17,7 @@ const headerPoNo = ref<string>("");
 const headerSjNo = ref<string>("");
 const headerSupplierName = ref<string>("");
 
-const DEFAULT_COMPANY_LOGO = "/hutomoLogoHitam.png";
+const DEFAULT_COMPANY_LOGO = "/miniMarketLogo.png";
 
 const resolveCompanyLogo = (logo?: string | null) => {
   if (!logo) return DEFAULT_COMPANY_LOGO;

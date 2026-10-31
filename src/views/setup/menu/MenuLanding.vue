@@ -154,6 +154,7 @@ const confirmDelete = async () => {
         if (response.status === 'success') {
             // Remove item from list
             menuData.value = menuData.value.filter(m => m.id !== itemToDelete.value!.id)
+            allMenuData.value = allMenuData.value.filter(m => m.id !== itemToDelete.value!.id)
 
             toast.success(`Menu "${itemToDelete.value.name}" berhasil dihapus`, {
                 description: response.message || 'Item telah dihapus dari database'

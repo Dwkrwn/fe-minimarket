@@ -67,9 +67,9 @@ onMounted(() => {
   
   // Set callback di API layer untuk handle token expired
   setTokenExpiredCallback(() => {
-    // Hanya clear token tapi JANGAN logout dulu
-    // Biarkan user re-login via dialog
-    showTokenExpiredDialog.value = true
+    authStore.logout()
+    showTokenExpiredDialog.value = false
+    if (router.currentRoute.value.name !== 'Login') void router.replace('/login')
   })
   
   // Listen untuk respo changes

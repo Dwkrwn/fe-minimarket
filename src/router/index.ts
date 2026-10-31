@@ -1,4 +1,5 @@
-import { createRouter, createWebHistory } from "vue-router";
+﻿import { createRouter, createWebHistory } from "vue-router";
+import { canVisit } from "@/lib/access";
 import { useAuthStore } from "@/stores/auth";
 import Layout from "@/components/Layout.vue";
 import Dashboard from "@/views/dashboard/Dashboard.vue";
@@ -456,95 +457,17 @@ router.beforeEach(async (to, from, next) => {
 
   const authStore = useAuthStore();
 
-  // CRITICAL: Check if user has valid session from localStorage
   authStore.checkAuth();
-
-  if (to.meta.requiresAuth) {
-    if (!authStore.isAuthenticated) {
-      next({ name: "Login", query: { redirect: to.fullPath } });
-      return;
-    }
-
-    // Check for Super Admin requirement
-    if (to.meta.requiresSuperAdmin) {
-      if (!authStore.isSuperAdmin) {
-        console.warn(`Super Admin access required for: ${to.path}`);
-        next({ name: "Dashboard" });
-        return;
-      }
-    }
-
-    // Check menu access permissions for regular users
-    if (!authStore.isSuperAdmin) {
-      // Routes yang tidak perlu cek menu permission (public untuk authenticated users)
-      const publicRoutes = ["Dashboard", "Notifikasi", "NotifikasiItemDetail"];
-
-      // Cek apakah route adalah bagian dari notifikasi (path dimulai dengan /notifikasi/)
-      const isNotificationRoute = to.path.startsWith("/notifikasi");
-
-      if (!publicRoutes.includes(to.name as string) && !isNotificationRoute) {
-        const selectRespoData = localStorage.getItem("SelectRespo");
-
-        if (selectRespoData) {
-          try {
-            const selectRespo = JSON.parse(selectRespoData);
-            const userMenus = selectRespo.menus || [];
-
-            let hasAccess = userMenus.some((menu: any) => {
-              return (
-                to.path === menu.path || to.path.startsWith(menu.path + "/")
-              );
-            });
-
-            // Check parent menu for child routes
-            if (!hasAccess && to.meta.parentMenu) {
-              const parentMenuName = to.meta.parentMenu as string;
-              hasAccess = userMenus.some((menu: any) => {
-                if (
-                  menu.name &&
-                  menu.name.toLowerCase().includes(parentMenuName.toLowerCase())
-                ) {
-                  return true;
-                }
-                return false;
-              });
-            }
-
-            // Check child route mapping
-            if (!hasAccess) {
-              const CHILD_ROUTE_MAPPING: Record<string, string> = {
-                "/setup/m_format_nomor": "/setup/m_prefix",
-              };
-
-              const basePath = "/" + to.path.split("/").slice(1, 3).join("/");
-              const parentPath = CHILD_ROUTE_MAPPING[basePath];
-
-              if (parentPath) {
-                hasAccess = userMenus.some((menu: any) => {
-                  return (
-                    menu.path === parentPath ||
-                    to.path.startsWith(parentPath + "/")
-                  );
-                });
-              }
-            }
-
-            if (!hasAccess) {
-              console.warn(`Access denied to route: ${to.path}`);
-              next({ name: "Dashboard" });
-              return;
-            }
-          } catch (e) {
-            console.error("Error parsing SelectRespo:", e);
-          }
-        }
-      }
-    }
-  } else if (to.name === "Login" && authStore.isAuthenticated) {
-    // Redirect to dashboard if already logged in and trying to access login
-    next({ name: "Dashboard" });
-    return;
+  if (authStore.isAuthenticated) {
+    try { await authStore.refreshUserData(); }
+    catch { if (authStore.isAuthenticated) { next(false); return; } }
   }
+  if (to.meta.requiresAuth) {
+    if (!authStore.isAuthenticated) { next({ name: 'Login', query: { redirect: to.fullPath } }); return; }
+    if (!authStore.user || !canVisit(authStore.user, to.path, String(to.name), !!to.params.id, to.meta.requiresSuperAdmin === true)) {
+      next({ name: 'Dashboard' }); return;
+    }
+  } else if (to.name === 'Login' && authStore.isAuthenticated) { next({ name: 'Dashboard' }); return; }
 
   next();
 });
@@ -556,7 +479,7 @@ router.afterEach((to) => {
     isSaving = false;
   }
   const title = to.meta.title as string;
-  document.title = title ? `HG - ${title}` : "HG - Hutomo Group";
+  document.title = title ? `Mini Market - ${title}` : "Mini Market";
 });
 
 export default router;

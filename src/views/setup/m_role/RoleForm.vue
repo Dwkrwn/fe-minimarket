@@ -33,10 +33,11 @@ const route = useRoute()
 // STATE
 // ============================================================================
 const loading = ref(false)
+const systemRole = ref(false)
 const isEditMode = computed(() => !!route.params.id && route.name === 'RoleForm')
 const isViewMode = computed(() => route.name === 'RoleView')
 const isCopyMode = computed(() => route.query.action === 'copy' && !!route.query.source)
-const isReadOnly = computed(() => isViewMode.value || route.meta.readOnly === true)
+const isReadOnly = computed(() => isViewMode.value || route.meta.readOnly === true || systemRole.value)
 const menuId = computed(() => route.params.id as string)
 
 const pageTitle = computed(() => {
@@ -99,10 +100,10 @@ const handleMenuAdd = (selectedMenus: any[]) => {
         path: menu.path
       },
       is_read: true,
-      is_create: true,
-      is_update: true,
-      is_delete: true,
-      is_print: true
+      is_create: false,
+      is_update: false,
+      is_delete: false,
+      is_print: false
     })
     
     addedCount++
@@ -163,6 +164,7 @@ onBeforeMount(async () => {
     
     if (res.status !== 'success') throw new Error('Gagal memuat data')
     initialValues = res.data
+    systemRole.value = !!(res.data as any).system_key && !isCopyModeLocal
     
 
 
@@ -399,7 +401,7 @@ const handleCancel = () => {
                   v-if="!isReadOnly"
                   title="Pilih Menu"
                   :api="{
-                    url: `${API_BASE_URL}/dynamic/m_menu`,
+                    url: `${API_BASE_URL}/auth/menu-options`,
                     headers: { Authorization: `Bearer ${authStore.token}` }
                   }"
                   :columns="[

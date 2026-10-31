@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { API_BASE_URL } from "@/lib/api";
@@ -25,7 +25,7 @@ const emit = defineEmits<{
 
 const { isMobile, state } = useSidebar();
 const authStore = useAuthStore();
-const DEFAULT_COMPANY_LOGO = "/hutomoLogoPutih.png";
+const DEFAULT_COMPANY_LOGO = "/miniMarketLogo.png";
 
 // Check if sidebar is collapsed
 const isCollapsed = computed(() => state.value === "collapsed");
@@ -34,8 +34,9 @@ const resolveCompanyLogo = (logo?: string | null) => {
   if (!logo) return DEFAULT_COMPANY_LOGO;
 
   const value = String(logo).trim();
-  if (!value) return DEFAULT_COMPANY_LOGO;
-  if (value === DEFAULT_COMPANY_LOGO) return DEFAULT_COMPANY_LOGO;
+  if (!value || value === DEFAULT_COMPANY_LOGO || value === "/hutomoLogoPutih.png" || value === "/hutomoLogoHitam.png") {
+    return DEFAULT_COMPANY_LOGO;
+  }
 
   if (
     value.startsWith("data:") ||
@@ -75,9 +76,9 @@ const respos = computed(() => {
     return [
       {
         id: "super-admin-respo",
-        companyName: "Bos Baut",
+        companyName: "Mini Market",
         unitBisnisName: "SUPER ADMIN",
-        respoName: "Bos Baut",
+        respoName: "Mini Market",
         logoSrc: DEFAULT_COMPANY_LOGO,
         isPrimary: true,
         isActive: true,
@@ -89,9 +90,11 @@ const respos = computed(() => {
     const unitBisnis = detail.m_respo.unit_bisnis;
     const company = unitBisnis?.m_company;
 
+    const rawName = company?.nama || "Mini Market";
+    const compName = (rawName === "Bos Baut" || rawName === "No Company") ? "Mini Market" : rawName;
     return {
       id: detail.id,
-      companyName: company?.nama || "No Company",
+      companyName: compName,
       unitBisnisName: unitBisnis?.nama_comp || "-",
       respoName: detail.m_respo.nama || "-",
       logoSrc: resolveCompanyLogo(company?.logo_img),
@@ -165,9 +168,9 @@ const extractSelectRespoData = (userDetailId: string) => {
   if (authStore.isSuperAdmin) {
     return {
       respoId: "super-admin-respo",
-      respoName: "Bos Baut",
+      respoName: "Mini Market",
       isPrimary: true,
-      companyLegalName: "Bos Baut",
+      companyLegalName: "Mini Market",
       companyLogo: DEFAULT_COMPANY_LOGO,
       unitBisnisName: "SUPER ADMIN",
       menus: [], // Super admin has access to all menus, will be handled separately
@@ -322,7 +325,7 @@ watch(
               <span
                 class="whitespace-normal break-words font-semibold text-sidebar-header-foreground"
               >
-                {{ activeTeam.companyName }}
+                {{ (activeTeam.companyName === 'Bos Baut' || activeTeam.companyName === 'Loading...' || !activeTeam.companyName) ? 'Mini Market' : activeTeam.companyName }}
               </span>
               <span
                 class="whitespace-normal break-words text-xs text-sidebar-header-foreground/70"

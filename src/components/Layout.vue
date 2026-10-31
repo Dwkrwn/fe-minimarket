@@ -1,8 +1,9 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref, onMounted, watch, onUnmounted } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { SwatchBook, MessageSquare } from "lucide-vue-next";
 import AppSidebar from "@/components/AppSidebar.vue";
+import { useAuthStore } from "@/stores/auth";
 import { useChatbot } from "@/composables/useChatbot";
 import {
   SidebarInset,
@@ -127,6 +128,7 @@ const loadReadNotifications = () => {
 
 // Fetch notification counts
 const fetchNotificationCounts = async (forceRefresh = false) => {
+  if (!useAuthStore().user?.capabilities?.notifications) return;
   try {
     loadReadNotifications();
 

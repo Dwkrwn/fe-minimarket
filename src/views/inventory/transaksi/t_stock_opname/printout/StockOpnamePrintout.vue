@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * StockOpnamePrintout.vue
  * Formulir kerja (worksheet) Stock Opname untuk diisi orang gudang saat opname.
@@ -187,7 +187,7 @@ const handlePrint = async () => {
         <div class="relative mb-6 pb-4 border-b-2 border-black">
           <div class="absolute left-0 top-0">
             <img
-              src="/hutomoLogoHitam.png"
+              src="/miniMarketLogo.png"
               alt="Logo Hutomo"
               class="h-14 w-14 object-contain"
             />

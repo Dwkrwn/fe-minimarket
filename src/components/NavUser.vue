@@ -26,7 +26,7 @@ import GlobalDialog from "@/components/dialog/GlobalDialog.vue";
 const router = useRouter();
 const authStore = useAuthStore();
 const { isMobile } = useSidebar();
-const DEFAULT_COMPANY_LOGO = "/hutomoLogoPutih.png";
+const DEFAULT_COMPANY_LOGO = "/miniMarketLogo.png";
 
 // Logout dialog state
 const isLogoutDialogOpen = ref(false);
@@ -43,8 +43,9 @@ const resolveCompanyLogo = (logo?: string | null) => {
   if (!logo) return DEFAULT_COMPANY_LOGO;
 
   const value = String(logo).trim();
-  if (!value) return DEFAULT_COMPANY_LOGO;
-  if (value === DEFAULT_COMPANY_LOGO) return DEFAULT_COMPANY_LOGO;
+  if (!value || value === DEFAULT_COMPANY_LOGO || value === "/hutomoLogoPutih.png" || value === "/hutomoLogoHitam.png") {
+    return DEFAULT_COMPANY_LOGO;
+  }
 
   if (
     value.startsWith("data:") ||
@@ -71,16 +72,18 @@ const resolveCompanyLogo = (logo?: string | null) => {
 const selectedCompany = computed(() => {
   try {
     const selectRespo = localStorage.getItem("SelectRespo");
-    if (!selectRespo) return { name: "Bos Baut", logo: DEFAULT_COMPANY_LOGO };
+    if (!selectRespo) return { name: "Mini Market", logo: DEFAULT_COMPANY_LOGO, nameRespo: "Mini Market" };
 
     const parsed = JSON.parse(selectRespo);
+    const rawName = parsed.companyLegalName || parsed.companyName || "Mini Market";
+    const rawRespo = parsed.respoName || "Mini Market";
     return {
-      name: parsed.companyLegalName || parsed.companyName || "Bos Baut",
+      name: (rawName === "Bos Baut" ? "Mini Market" : rawName),
       logo: resolveCompanyLogo(parsed.companyLogo),
-      nameRespo: parsed.respoName || "Bos Baut",
+      nameRespo: (rawRespo === "Bos Baut" ? "Mini Market" : rawRespo),
     };
   } catch {
-    return { name: "Bos Baut", logo: DEFAULT_COMPANY_LOGO };
+    return { name: "Mini Market", logo: DEFAULT_COMPANY_LOGO, nameRespo: "Mini Market" };
   }
 });
 
@@ -144,7 +147,7 @@ const handleLogout = async () => {
             <div class="grid flex-1 text-left text-sm leading-tight ml-2 group-data-[collapsible=icon]:hidden">
               <span class="truncate font-bold text-slate-900 text-sm tracking-tight">{{ displayName }}</span>
               <span class="truncate text-xs text-slate-500 font-medium">{{
-                selectedCompany.nameRespo || "Bos Baut"
+                selectedCompany.nameRespo || "Mini Market"
               }}</span>
             </div>
             <ChevronsUpDown
@@ -172,7 +175,7 @@ const handleLogout = async () => {
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">{{ displayName }}</span>
                 <span class="truncate text-xs">{{
-                  selectedCompany.nameRespo || "Bos Baut"
+                  selectedCompany.nameRespo || "Mini Market"
                 }}</span>
               </div>
             </div>

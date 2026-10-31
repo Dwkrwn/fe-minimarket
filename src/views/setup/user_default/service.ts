@@ -20,7 +20,9 @@ export interface UserDefaultItem {
   is_active?: boolean
   name?: string
   username: string
-  password: string
+  password?: string
+  role_id?: string
+  role?: { id: string; nama_role: string; system_key: string | null }
   catatan?: string
   createdAt: string
   updatedAt: string
@@ -70,110 +72,21 @@ export interface UserDefaultListResponse {
  * @param companyId - Filter by company/unit bisnis ID (optional, for non-super admin)
  * @returns Promise with user_default list
  */
-export async function getUserDefaultList(
-  page: number = 1,
-  paginate: number = 10,
-  order_by: string = 'createdAt',
-  order_type: 'ASC' | 'DESC' = 'DESC',
-  search?: string,
-  searchfield?: string,
-  companyId?: string
-): Promise<UserDefaultListResponse> {
-  const queryParams = new URLSearchParams({
-    page: page.toString(),
-    paginate: paginate.toString(),
-    order_by,
-    order_type,
-    // COMMENTED [tipe_user_id]: m_general@tipe removed from include
-    include: 'm_kary@karyawan:nama_kary|id|m_unit_bisnis_id,m_kary>m_unit_bisnis:nama_comp|id', // Include m_kary only
-  })
-  
-  if (search && search.trim()) {
-    queryParams.append('search', search.trim())
-  }
-  
-  if (searchfield) {
-    queryParams.append('searchfield', searchfield)
-  }
-  
-  // Filter by company if provided (for non-super admin)
-  // Filter berdasarkan m_unit_bisnis_id dari relasi m_kary
-  if (companyId) {
-    queryParams.append('filter_column_m_kary.m_unit_bisnis_id', companyId)
-  }
-  
-  return apiCall<UserDefaultListResponse>(`/dynamic/user_default?${queryParams}`, {
-    method: 'GET'
-  })
+export async function getUserDefaultList(page=1, paginate=10, order_by='createdAt', order_type: 'ASC' | 'DESC'='DESC', search?: string, searchfield?: string, _companyId?: string): Promise<UserDefaultListResponse> {
+ const params = new URLSearchParams({ page:String(page), paginate:String(paginate), order_by, order_type, search:search || '' })
+ return apiCall('/dynamic/user_default?' + params)
 }
-
-/**
- * Get UserDefault by ID
- * @param id - UserDefault ID
- * @returns Promise with user_default detail
- */
-export async function getUserDefaultById(id: string): Promise<{ status: string; data: UserDefaultItem }> {
-  const queryParams = new URLSearchParams({
-    include: 'user_detail>m_respo' // Include user_detail with m_respo relation
-  })
-  return apiCall(`/dynamic/user_default/${id}?${queryParams}`, {
-    method: 'GET'
-  })
+export async function getUserDefaultById(id: string): Promise<{status: string; data: UserDefaultItem}> {
+ const result = await apiCall<{status:string;data:UserDefaultItem}>('/dynamic/user_default/' + id)
+ const role = result.data.role
+ return { ...result, data: { ...result.data, user_details: role ? [{m_respo_id: role.id, is_primary:true, is_active:true, m_respo:{id:role.id,name:role.nama_role}}] : [] } }
 }
-
-/**
- * Create new UserDefault
- * @param data - user_default data
- * @param hasDetails - Whether data includes user_details
- * @returns Promise with created UserDefault
- */
-export async function createUserDefault(
-  data: Partial<UserDefaultItem>, 
-  hasDetails: boolean = false
-): Promise<{ status: string; data: UserDefaultItem }> {
-  const endpoint = hasDetails ? '/dynamic/user_default/with-details' : '/dynamic/user_default'
-  return apiCall(endpoint, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  })
+export function userPayload(data: Partial<UserDefaultItem>) {
+ const role_id = data.role_id || data.user_details?.[0]?.m_respo_id
+ if (!role_id || (data.user_details && (data.user_details.length !== 1 || data.user_details[0]?.is_active === false))) throw new Error('Pilih satu role aktif untuk akun ini')
+ return { name:data.name || data.username, username:data.username, role_id, is_active:data.is_active !== false, catatan:data.catatan || null, ...(data.password ? {password:data.password} : {}) }
 }
-
-/**
- * Update UserDefault
- * @param id - UserDefault ID
- * @param data - user_default data to update
- * @param hasDetails - Whether data includes user_details
- * @returns Promise with updated UserDefault
- */
-export async function updateUserDefault(
-  id: string, 
-  data: Partial<UserDefaultItem>,
-  hasDetails: boolean = false
-): Promise<{ status: string; data: UserDefaultItem }> {
-  const endpoint = hasDetails ? `/dynamic/user_default/with-details/${id}` : `/dynamic/user_default/${id}`
-  return apiCall(endpoint, {
-    method: 'PUT',
-    body: JSON.stringify(data)
-  })
-}
-
-/**
- * Delete UserDefault
- * @param id - UserDefault ID
- * @returns Promise with delete confirmation
- */
-export async function deleteUserDefault(id: string): Promise<{ status: string; message: string }> {
-  return apiCall(`/dynamic/user_default/with-details/${id}`, {
-    method: 'DELETE'
-  })
-}
-
-/**
- * Get all user_default data without pagination (for sidebar)
- * @returns Promise with user_default list
- */
-export async function getUserDefaultListNoPagination(): Promise<UserDefaultListResponse> {
-  return apiCall<UserDefaultListResponse>('/dynamic/user_default?no_pagination=true', {
-    method: 'GET'
-  })
-}
+export const createUserDefault = (data:Partial<UserDefaultItem>, _hasDetails=false) => apiCall<{status:string;data:UserDefaultItem}>('/dynamic/user_default',{method:'POST',body:JSON.stringify(userPayload(data))})
+export const updateUserDefault = (id:string,data:Partial<UserDefaultItem>, _hasDetails=false) => apiCall<{status:string;data:UserDefaultItem}>('/dynamic/user_default/'+id,{method:'PUT',body:JSON.stringify(userPayload(data))})
+export const deleteUserDefault = (id:string) => apiCall<{status:string;message:string}>('/dynamic/user_default/'+id,{method:'DELETE'})
+export const getUserDefaultListNoPagination = () => apiCall<UserDefaultListResponse>('/dynamic/user_default?no_pagination=true')

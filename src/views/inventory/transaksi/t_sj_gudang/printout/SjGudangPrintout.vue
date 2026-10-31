@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * SjGudangPrintout.vue
  * Component for printing/exporting Surat Jalan Gudang as PDF
@@ -56,7 +56,7 @@ const printDate = computed(() => {
   });
 });
 
-const DEFAULT_COMPANY_LOGO = "/hutomoLogoHitam.png";
+const DEFAULT_COMPANY_LOGO = "/miniMarketLogo.png";
 
 const resolveCompanyLogo = (logo?: string | null) => {
   if (!logo) return DEFAULT_COMPANY_LOGO;

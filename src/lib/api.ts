@@ -39,32 +39,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   status: string
   token: string
-  data: {
-    user: {
-      id: string
-      username: string
-    }
-  }
-}
-
-export interface UserDefaultResponse {
-  status: string
-  data: {
-    tipe: {
-      value1: string
-    }
-    id: string
-    name: string
-    username: string
-    user_type: string
-    desc: string
-    status: boolean
-    sales_id: string | null
-    atasan_id: string | null
-    readonly: boolean
-    createdAt: string
-    updatedAt: string
-  }
+  data: { user: import('@/stores/auth').SessionUser }
 }
 
 export interface ApiError {
@@ -211,14 +186,7 @@ export async function apiCall<T>(
 
   // Check untuk token expired atau invalid
   // Support berbagai format error message dari backend
-  const isTokenExpired = data.status === 'error' && (
-    data.message?.toLowerCase().includes('invalid token') ||
-    data.message?.toLowerCase().includes('token expired') ||
-    data.message?.toLowerCase().includes('token has expired') ||
-    data.message?.toLowerCase().includes('unauthorized') ||
-    response.status === 401 ||
-    response.status === 403
-  )
+  const isTokenExpired = response.status === 401
 
   if (isTokenExpired) {
     const error = new TokenExpiredError(data.message || 'Session expired')
@@ -320,15 +288,15 @@ export async function bulkDeleteWithFallback(
 }
 
 /**
- * Get user default data with full respo, role, permission details, AND approval data
- * @param userId - User ID from auth response
- * @param token - Auth token (required for first time login)
- * @returns Promise with user default data including nested respo, role, menu permissions, and approval data
+ * Get the full session user (role, menus, permissions, capabilities) for a token.
+ * @param token - Auth token
+ * @returns Promise with the current user's complete session data
  */
-export async function getUserDefault(userId: string, token: string): Promise<UserDefaultResponse> {
-  return apiCall<UserDefaultResponse>(
-    `/dynamic/user_default/${userId}?include=user_detail%3Em_respo%3Em_unit_bisnis%2Cuser_detail%3Em_respo%3Em_unit_bisnis%3Em_company%2Cuser_detail%3Em_respo%3Em_respo_d%3Em_role%3Em_role_d%3Em_menu%2Cm_general%2Cm_approval_d%3Em_general%2Cm_approval_d%3Em_approval%3Em_menu&no_pagination=true`,
+export async function getCurrentUser(token: string): Promise<import('@/stores/auth').SessionUser> {
+  const result = await apiCall<{ status?: string; data: import('@/stores/auth').SessionUser }>(
+    '/auth/me',
     {},
     token
   )
+  return result.data
 }

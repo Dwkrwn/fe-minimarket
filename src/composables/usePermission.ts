@@ -117,7 +117,7 @@ export function usePermission() {
     if (matchingMenus.length > 0) {
       // Sort by longest path to get the most specific menu
       matchingMenus.sort((a, b) => (b.path?.length || 0) - (a.path?.length || 0))
-      return matchingMenus[0].id
+      return matchingMenus[0]?.id
     }
 
     // Third, try to find by base path (for form/view routes like /setup/m_prefix/form/:id)
