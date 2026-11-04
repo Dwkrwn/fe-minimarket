@@ -3,6 +3,23 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 // Export API_BASE_URL for use in components
 export { API_BASE_URL }
 
+/**
+ * Backend me-mount modul bisnis di "/api/v1/..." (lihat be-minimarket: modules/index.js).
+ * VITE_API_BASE_URL bisa berisi "..." atau ".../api", jadi helper ini memastikan
+ * prefix "/api" hanya ditambahkan sekali.
+ * Contoh: apiPath('/v1/inventory/categories') -> '/api/v1/inventory/categories'
+ */
+export const apiPath = (path: string): string => {
+  const base = (API_BASE_URL || '').replace(/\/+$/, '')
+  const normalized = path.startsWith('/') ? path : `/${path}`
+
+  if (base.endsWith('/api') || normalized === '/api' || normalized.startsWith('/api/')) {
+    return normalized
+  }
+
+  return `/api${normalized}`
+}
+
 const sanitizeLegacySearchfield = (urlOrEndpoint: string) => {
   try {
     const url = new URL(urlOrEndpoint, API_BASE_URL)

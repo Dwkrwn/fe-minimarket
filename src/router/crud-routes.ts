@@ -421,6 +421,12 @@ const crudRoutesConfig = [
     basePath: "/inventory/master/m_rak",
   },
   {
+    path: "/inventory/master/m_category",
+    name: "Category",
+    title: "Category",
+    basePath: "/inventory/master/m_category",
+  },
+  {
     path: "/inventory/transaksi/t_transform_item",
     name: "TransformItem",
     title: "Transform Item",
