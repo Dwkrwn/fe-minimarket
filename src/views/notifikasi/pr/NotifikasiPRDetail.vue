@@ -18,7 +18,6 @@ import {
   rejectPurchaseRequest,
   type PRNotification
 } from './service.pr'
-import { getTPurchaseRequestById } from '@/views/purchasing/transaksi/t_purchase_request/service'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import FieldX from '@/components/field/FieldX.vue'
@@ -99,23 +98,9 @@ const fetchNotificationDetail = async () => {
 
     let hydratedNotification: any = { ...found }
 
-    // Re-fetch full PR detail using same source as PurchaseRequestForm,
-    // so detail items/UOM/images are consistent and complete.
-    if (found.t_purchase_request_id) {
-      try {
-        const prRes = await getTPurchaseRequestById(found.t_purchase_request_id)
-        if (prRes?.status === 'success' && prRes?.data) {
-          hydratedNotification.t_purchase_request = normalizePrDetails(prRes.data)
-        } else if (found.t_purchase_request) {
-          hydratedNotification.t_purchase_request = normalizePrDetails(found.t_purchase_request)
-        }
-      } catch (err) {
-        console.warn('Failed to hydrate PR detail from t_purchase_request service:', err)
-        if (found.t_purchase_request) {
-          hydratedNotification.t_purchase_request = normalizePrDetails(found.t_purchase_request)
-        }
-      }
-    } else if (found.t_purchase_request) {
+    // Purchase Request legacy tidak lagi memiliki halaman/service di frontend.
+    // Gunakan payload yang sudah dikirim notifikasi bila tersedia.
+    if (found.t_purchase_request) {
       hydratedNotification.t_purchase_request = normalizePrDetails(found.t_purchase_request)
     }
 
@@ -148,7 +133,7 @@ const handleApproval = async (status: 'APPROVED' | 'REVISI') => {
     // Get approval info from localStorage
     const approvalList = authStore.getApprovalList()
     const prApproval = approvalList.find((a: any) =>
-      a.path === '/purchasing/transaksi/t_purchase_request' &&
+      a.path === '/purchasing/order/auto-pr' &&
       a.tipe_approve?.toUpperCase() === 'MENYETUJUI'
     )
 
@@ -213,7 +198,7 @@ const handleReject = async () => {
     // Get approval info from localStorage
     const approvalList = authStore.getApprovalList()
     const prApproval = approvalList.find((a: any) =>
-      a.path === '/purchasing/transaksi/t_purchase_request' &&
+      a.path === '/purchasing/order/auto-pr' &&
       a.tipe_approve?.toUpperCase() === 'MENYETUJUI'
     )
 

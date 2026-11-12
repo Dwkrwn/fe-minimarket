@@ -22,7 +22,7 @@ import {
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import FieldX from '@/components/field/FieldX.vue'
-import { getTPurchaseOrderById, type TPurchaseOrderDetail } from '@/views/purchasing/transaksi/t_purchase_order/service'
+import { getPurchaseOrder } from '@/views/purchasing/order/purchase_orders/purchaseOrderService'
 
 
 const { API_BASE_URL } = useApi()
@@ -35,7 +35,7 @@ const notification = ref<PONotification | null>(null)
 const approvalCatatan = ref('')
 
 // PO details
-const poDetails = ref<TPurchaseOrderDetail[]>([])
+const poDetails = ref<any[]>([])
 const loadingDetails = ref(false)
 
 // Preview image dialog
@@ -96,15 +96,17 @@ const fetchNotificationDetail = async () => {
 const fetchItemDetails = async (poId: string) => {
   try {
     loadingDetails.value = true
-    const response = await getTPurchaseOrderById(poId)
-    if (response.status === 'success' && response.data) {
-      // The API returns details in `t_purchase_order_ds` or `t_purchase_order_d` based on include map
-      const items = response.data.t_purchase_order_ds || (response.data as any).t_purchase_order_d || []
-      poDetails.value = items
-
-      // If currency details are not populated in the brief notification, we could optionally update them 
-      // but notification.uang_po is usually sufficient
-    }
+    const po = await getPurchaseOrder(poId)
+    poDetails.value = (po.details || []).map((detail) => ({
+      id: detail.id || detail.item_id,
+      kode_item: detail.item?.barcode || '-',
+      nama_item: detail.item?.nama_barang || '-',
+      qty_po: detail.qty_order_beli,
+      uom: detail.uom?.satuan_beli || detail.item?.uom?.satuan_beli || 'Pcs',
+      harga: Number(detail.harga_satuan || 0),
+      sub_total: Number(detail.subtotal || 0),
+      catatan: null,
+    }))
   } catch (error) {
     console.error('Failed to fetch PO details:', error)
   } finally {
@@ -129,7 +131,7 @@ const handleApproval = async (status: 'APPROVED' | 'REVISI') => {
     // Get approval info from localStorage
     const approvalList = authStore.getApprovalList()
     const poApproval = approvalList.find((a: any) =>
-      a.path === '/purchasing/transaksi/t_purchase_order' &&
+      a.path === '/purchasing/order/purchase-orders' &&
       a.tipe_approve?.toUpperCase() === 'MENYETUJUI'
     )
 
@@ -194,7 +196,7 @@ const handleReject = async () => {
     // Get approval info from localStorage
     const approvalList = authStore.getApprovalList()
     const poApproval = approvalList.find((a: any) =>
-      a.path === '/purchasing/transaksi/t_purchase_order' &&
+      a.path === '/purchasing/order/purchase-orders' &&
       a.tipe_approve?.toUpperCase() === 'MENYETUJUI'
     )
 

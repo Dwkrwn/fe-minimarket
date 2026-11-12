@@ -188,7 +188,7 @@ function getApprovalByPath(path: string): { id: string; sender_id: string; level
 }
 
 // Purchase Request path constant
-const PR_PATH = '/purchasing/transaksi/t_purchase_request'
+const PR_PATH = '/purchasing/order/auto-pr'
 
 // ============================================================================
 // API FUNCTIONS

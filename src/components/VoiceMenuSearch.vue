@@ -19,229 +19,80 @@ const recognition = ref<any>(null)
 interface StaticMenu { name: string; path: string; keywords: string[] }
 
 const staticMenus: StaticMenu[] = [
-  // ── ACCOUNTING ──
-  {
-    name: 'COA / Chart of Account',
-    path: '/accounting/master/m_coa',
-    keywords: ['coa', 'co a', 'koa', 'jua', 'coa.', 'chart of account', 'chart account', 'akun', 'akuntansi', 'buku besar', 'ledger', 'kode akun', 'daftar akun', 'chart']
-  },
   // ── SETUP ──
-  {
-    name: 'General / Pengaturan Umum',
-    path: '/setup/m_general',
-    keywords: ['general', 'pengaturan', 'pengaturan umum', 'setting', 'konfigurasi', 'umum']
-  },
   {
     name: 'User Default',
     path: '/setup/user_default',
-    keywords: ['user', 'pengguna', 'yusr', 'yuser', 'user default', 'default user', 'pengguna default', 'user awal', 'manajemen user', 'data user', 'akun pengguna']
-  },
-  {
-    name: 'Unit Bisnis',
-    path: '/setup/m_unit_bisnis',
-    keywords: ['unit bisnis', 'bisnis', 'cabang', 'divisi', 'unit', 'business unit']
-  },
-  {
-    name: 'Prefix / Nomor',
-    path: '/setup/m_prefix',
-    keywords: ['prefix', 'nomor', 'number', 'penomoran', 'format nomor', 'kode dokumen']
+    keywords: ['user', 'pengguna', 'yusr', 'yuser', 'user default', 'default user', 'pengguna default', 'manajemen user', 'data user', 'akun pengguna']
   },
   {
     name: 'Role',
     path: '/setup/m_role',
-    keywords: ['role', 'rol', 'roll', 'rul', 'roley', 'roles', 'peran', 'hak akses', 'role user', 'jabatan akses', 'akses pengguna', 'atur role']
+    keywords: ['role', 'rol', 'roll', 'rul', 'roles', 'peran', 'hak akses', 'role user', 'atur role']
   },
   {
-    name: 'Responsibility',
-    path: '/setup/m_respo',
-    keywords: ['responsibility', 'respo', 'tanggung jawab', 'akses menu', 'permission', 'izin']
+    name: 'Master Menu',
+    path: '/setup/menu',
+    keywords: ['menu', 'master menu', 'navigasi', 'sidebar', 'menu aplikasi']
   },
   {
-    name: 'Karyawan',
-    path: '/setup/m_kary',
-    keywords: ['karyawan', 'kary', 'pegawai', 'staff', 'employee', 'sdm', 'sumber daya manusia', 'personalia']
+    name: 'Setting Dashboard',
+    path: '/setup/m_dashboard',
+    keywords: ['dashboard', 'setting dashboard', 'pengaturan dashboard', 'widget', 'beranda']
   },
   {
-    name: 'Approval',
-    path: '/setup/m_approval',
-    keywords: ['approval', 'persetujuan', 'approve', 'otorisasi', 'autorisasi', 'validasi dokumen']
-  },
-  {
-    name: 'Currency / Mata Uang',
-    path: '/setup/m_currency',
-    keywords: ['currency', 'karens', 'kurrens', 'mata uang', 'uang', 'kurs', 'valuta', 'exchange rate', 'rupiah', 'dollar', 'nilai tukar', 'daftar mata uang']
-  },
-  {
-    name: 'Group Item',
-    path: '/setup/m_item_group',
-    keywords: ['group item', 'item group', 'grup item', 'kategori barang', 'group barang', 'golongan item']
-  },
-  {
-    name: 'Kendaraan',
-    path: '/setup/m_kendaraan',
-    keywords: ['kendaraan', 'mobil', 'motor', 'armada', 'kendaraan operasional', 'vehicle', 'transportasi']
+    name: 'Notifikasi',
+    path: '/notifikasi',
+    keywords: ['notifikasi', 'notification', 'pemberitahuan', 'approval', 'persetujuan']
   },
   // ── PURCHASING MASTER ──
   {
     name: 'Supplier',
-    path: '/purchasing/master/m_supplier',
+    path: '/purchasing/master/suppliers',
     keywords: ['supplier', 'vendor', 'pemasok', 'rekanan', 'mitra', 'suplier', 'master supplier', 'data supplier', 'daftar supplier']
   },
+  {
+    name: 'Katalog Harga Supplier',
+    path: '/purchasing/master/supplier-catalogs',
+    keywords: ['price list', 'daftar harga', 'harga beli', 'pricelist', 'katalog harga', 'harga supplier']
+  },
+  // ── INVENTORY MASTER ──
   {
     name: 'Items / Barang',
     path: '/inventory/master/m_items',
     keywords: ['item', 'items', 'barang', 'produk', 'product', 'material', 'bahan', 'master item', 'master barang', 'katalog']
   },
-  // ── PURCHASING TRANSAKSI ──
+  // ── PURCHASING ──
   {
-    name: 'Purchase Request',
-    path: '/purchasing/transaksi/t_purchase_request',
-    keywords: ['purchase request', 'permintaan pembelian', 'request pembelian', 'permintaan barang', 'buat permintaan beli']
-  },
-  {
-    name: 'Purchase Request Close',
-    path: '/purchasing/transaksi/t_purchase_request_close',
-    keywords: ['closing pr', 'pr close', 'tutup pr', 'close pr', 'close purchase request', 'purchase request close', 'penutupan pr']
+    name: 'Rekomendasi Belanja',
+    path: '/purchasing/order/auto-pr',
+    keywords: ['purchase request', 'permintaan pembelian', 'request pembelian', 'rekomendasi belanja', 'auto pr', 'permintaan barang']
   },
   {
     name: 'Purchase Order',
-    path: '/purchasing/transaksi/t_purchase_order',
-    keywords: ['purchase order', 'order pembelian', 'pembelian', 'pesan barang', 'buat order beli', 'order beli', 'transaksi pembelian']
+    path: '/purchasing/order/purchase-orders',
+    keywords: ['purchase order', 'order pembelian', 'pembelian', 'pesan barang', 'buat order beli', 'order beli', 'transaksi pembelian', 'po']
   },
   {
-    name: 'Purchase Order Close',
-    path: '/purchasing/transaksi/t_purchase_order_close',
-    keywords: ['closing po', 'po close', 'tutup po', 'close po', 'close purchase order', 'purchase order close', 'penutupan po']
+    name: 'Tracking PO',
+    path: '/purchasing/order/tracking',
+    keywords: ['tracking po', 'progres po', 'status po', 'pemenuhan po', 'sisa barang']
   },
   {
-    name: 'Purchase Invoice',
-    path: '/purchasing/transaksi/t_purchase_invoice',
-    keywords: ['purchase invoice', 'invoice pembelian', 'faktur pembelian', 'tagihan pembelian', 'faktur vendor', 'invoice beli']
-  },
-  {
-    name: 'Purchase Return',
-    path: '/purchasing/transaksi/t_purchase_return',
+    name: 'Retur Pembelian',
+    path: '/purchasing/receiving/purchase-returns',
     keywords: ['purchase return', 'return pembelian', 'retur', 'retur barang', 'pengembalian barang', 'return']
   },
   {
-    name: 'Penerimaan / LPB',
-    path: '/purchasing/transaksi/t_penerimaan',
+    name: 'Penerimaan Barang',
+    path: '/purchasing/receiving/goods-receipts',
     keywords: ['penerimaan', 'lpb', 'terima barang', 'penerimaan barang', 'receiving', 'goods receipt', 'good receipt', 'grn penerimaan']
   },
-  {
-    name: 'RFQ / Request for Quotation',
-    path: '/purchasing/transaksi/t_rfq',
-    keywords: ['rfq', 'request for quotation', 'request quotation', 'permintaan penawaran harga', 'minta penawaran', 'permohonan penawaran', 'quotation request', 'ar ef ku', 'ar ef queue', 'arfq']
-  },
-  {
-    name: 'Supplier Quotation',
-    path: '/purchasing/transaksi/t_supplier_quotation',
-    keywords: ['supplier quotation', 'penawaran supplier', 'kuotasi supplier', 'harga penawaran', 'penawaran harga supplier', 'penawaran dari supplier', 'quotation supplier']
-  },
-  {
-    name: 'Biaya Kirim',
-    path: '/purchasing/transaksi/t_import_cost',
-    keywords: ['Biaya Kirim', 'biaya import', 'biaya impor', 'impor', 'import', 'bea masuk', 'landed cost']
-  },
-  // ── INVENTORY ──
-  {
-    name: 'Gudang / Warehouse',
-    path: '/inventory/master/m_gudang',
-    keywords: ['gudang', 'warehouse', 'wh', 'master gudang', 'lokasi gudang', 'depo']
-  },
-  {
-    name: 'Rak',
-    path: '/inventory/master/m_rak',
-    keywords: ['rak', 'lokasi rak', 'bin', 'shelf', 'tempat barang', 'lokasi penyimpanan']
-  },
+  // ── INVENTORY TRANSAKSI ──
   {
     name: 'Stock Opname',
-    path: '/inventory/transaksi/t_stock_opname',
+    path: '/inventory/opname/fisik',
     keywords: ['stock opname', 'opname', 'so', 'hitung stok', 'cek stok', 'fisik stok', 'stock count', 'stock take']
-  },
-  {
-    name: 'Stock Adjustment',
-    path: '/inventory/transaksi/t_stock_adj',
-    keywords: ['stock adjustment', 'adj', 'penyesuaian stok', 'adjustment stok', 'koreksi stok', 'stock adj']
-  },
-  {
-    name: 'Transfer Gudang',
-    path: '/inventory/transaksi/t_transfer_gudang',
-    keywords: ['transfer gudang', 'transfer warehouse', 'pindah barang', 'mutasi gudang', 'transfer stok', 'pindah stok', 'tg', 'tw']
-  },
-  {
-    name: 'Surat Jalan Gudang',
-    path: '/inventory/transaksi/t_sj_gudang',
-    keywords: ['surat jalan', 'sj', 'sj gudang', 'surat jalan gudang', 'delivery order', 'do', 'pengiriman']
-  },
-  {
-    name: 'Penerimaan Gudang',
-    path: '/inventory/transaksi/t_penerimaan_gudang',
-    keywords: ['penerimaan gudang', 'terima gudang', 'receiving gudang', 'goods receipt gudang', 'penerimaan warehouse']
-  },
-  // ── PURCHASING MASTER tambahan ──
-  {
-    name: 'Ekspedisi',
-    path: '/purchasing/master/m_ekspedisi',
-    keywords: ['ekspedisi', 'kurir', 'pengiriman', 'jasa kirim', 'ekspedisi barang', 'logistik', 'cargo']
-  },
-  // ── MARKETING MASTER ──
-  {
-    name: 'Customer / Pelanggan',
-    path: '/marketing/master/m_customer',
-    keywords: ['customer', 'pelanggan', 'konsumen', 'klien', 'client', 'pembeli', 'master customer']
-  },
-  {
-    name: 'Prospek',
-    path: '/marketing/master/m_prospek',
-    keywords: ['prospek', 'prospect', 'calon pelanggan', 'leads', 'potential customer', 'calon customer']
-  },
-  // ── MARKETING TRANSAKSI ──
-  {
-    name: 'Sales Quotation',
-    path: '/marketing/transaksi/t_sales_quotation',
-    keywords: ['sales quotation', 'customer quotation', 'penawaran penjualan', 'kuotasi penjualan', 'penawaran ke pelanggan', 'penawaran harga jual', 'quotation penjualan', 'penawaran customer']
-  },
-  {
-    name: 'Sales Order',
-    path: '/marketing/transaksi/t_sales_order',
-    keywords: ['sales order', 'order penjualan', 'pesanan penjualan', 'buat order jual', 'order jual', 'transaksi penjualan']
-  },
-  {
-    name: 'Sales Reservation',
-    path: '/marketing/transaksi/t_sales_reservation',
-    keywords: ['sales reservation', 'reservasi', 'reservation penjualan', 'booking', 'sales booking', 'reservasi sales']
-  },
-  {
-    name: 'Closing SO / Sales Order Close',
-    path: '/marketing/transaksi/t_sales_close',
-    keywords: ['closing so', 'so close', 'sales close', 'tutup so', 'close sales order', 'close so', 'sales order close']
-  },
-  {
-    name: 'Surat Jalan',
-    path: '/marketing/transaksi/t_surat_jalan',
-    keywords: ['surat jalan', 'sj', 'delivery order', 'do', 'pengiriman barang', 'surat pengiriman', 'sj marketing']
-  },
-  {
-    name: 'Sales Invoice',
-    path: '/marketing/transaksi/t_sales_invoice',
-    keywords: ['sales invoice', 'invoice penjualan', 'faktur penjualan', 'tagihan pelanggan', 'tagihan penjualan', 'invoice jual']
-  },
-  {
-    name: 'Sales Return',
-    path: '/marketing/transaksi/t_sales_return',
-    keywords: ['sales return', 'return penjualan', 'retur penjualan', 'retur sales', 'pengembalian penjualan']
-  },
-  // ── INVENTORY LAINNYA ──
-  {
-    name: 'Info Stock / Stock Per Gudang',
-    path: '/inventory/transaksi/stock_gudang',
-    keywords: ['info stock', 'stock gudang', 'stok gudang', 'info stok', 'cek stock', 'lihat stock', 'stock per gudang', 'stok per gudang']
-  },
-  {
-    name: 'Info Stock per Item / Stock Per Item',
-    path: '/inventory/transaksi/stock_gudang_2',
-    keywords: ['info stock per item', 'stock item', 'item stock', 'stok per item', 'lokasi item', 'item location', 'cari item', 'stok barang']
   },
 ]
 

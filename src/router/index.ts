@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHistory } from "vue-router";
 import { canVisit } from "@/lib/access";
 import { useAuthStore } from "@/stores/auth";
 import Layout from "@/components/Layout.vue";
@@ -82,62 +82,282 @@ const router = createRouter({
           },
         },
 
-        // Format Nomor (shares active state with Prefix)
+        // ====================================================================
+        // MODUL 3 : PURCHASING
+        // ====================================================================
+
+        // 1.1 Data Pemasok
         {
-          path: "/setup/m_format_nomor",
-          name: "FormatNomor",
+          path: "/purchasing/master/suppliers",
+          name: "PurchasingSuppliers",
           component: () =>
-            import("@/views/setup/m_prefix/FormatNomorLanding.vue"),
+            import("@/views/purchasing/master/suppliers/SupplierLanding.vue"),
           meta: {
-            title: "Format Nomor",
+            title: "Supplier",
             requiresAuth: true,
-            parentMenu: "Prefix",
           },
         },
         {
-          path: "/setup/m_format_nomor/form/:id?",
-          name: "FormatNomorForm",
-          component: () => import("@/views/setup/m_prefix/FormatNomor.vue"),
+          path: "/purchasing/master/suppliers/form/:id?",
+          name: "PurchasingSupplierForm",
+          component: () =>
+            import("@/views/purchasing/master/suppliers/SupplierForm.vue"),
           meta: {
-            title: "Form Format Nomor",
+            title: "Form Supplier",
             requiresAuth: true,
-            parentMenu: "Prefix",
           },
         },
         {
-          path: "/setup/m_format_nomor/view/:id",
-          name: "FormatNomorView",
-          component: () => import("@/views/setup/m_prefix/FormatNomor.vue"),
+          path: "/purchasing/master/suppliers/view/:id",
+          name: "PurchasingSupplierView",
+          component: () =>
+            import("@/views/purchasing/master/suppliers/SupplierForm.vue"),
           meta: {
-            title: "Detail Format Nomor",
+            title: "Detail Supplier",
             requiresAuth: true,
             readOnly: true,
-            parentMenu: "Prefix",
           },
         },
 
-        // Price List
+        // 1.2 Katalog Harga & Produk Supplier
         {
-          path: "/purchasing/master/m_price_list",
-          name: "PriceList",
+          path: "/purchasing/master/supplier-catalogs",
+          name: "PurchasingSupplierCatalogs",
           component: () =>
-            import("@/views/purchasing/master/m_price_list/PriceList.vue"),
+            import("@/views/purchasing/master/supplier_catalogs/SupplierCatalogView.vue"),
           meta: {
-            title: "Master Price List",
+            title: "Katalog Harga Supplier",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/master/supplier_catalogs",
+          name: "PurchasingSupplierCatalogsUnderscore",
+          redirect: { name: "PurchasingSupplierCatalogs" },
+        },
+
+        // 2.1 Rekomendasi Belanja Otomatis (Auto-PR)
+        {
+          path: "/purchasing/order/auto-pr",
+          name: "PurchasingAutoPr",
+          component: () =>
+            import("@/views/purchasing/order/auto_pr/AutoPrLanding.vue"),
+          meta: {
+            title: "Rekomendasi Belanja",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/order/auto_pr",
+          name: "PurchasingAutoPrUnderscore",
+          redirect: { name: "PurchasingAutoPr" },
+        },
+
+        // 2.2 Buat & Kelola Purchase Order (PO)
+        {
+          path: "/purchasing/order/purchase-orders",
+          name: "PurchasingPurchaseOrders",
+          component: () =>
+            import("@/views/purchasing/order/purchase_orders/PurchaseOrderLanding.vue"),
+          meta: {
+            title: "Purchase Order",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/order/purchase-orders/form",
+          name: "PurchasingPurchaseOrderForm",
+          component: () =>
+            import("@/views/purchasing/order/purchase_orders/PurchaseOrderForm.vue"),
+          meta: {
+            title: "Form Purchase Order",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/order/purchase-orders/view/:id",
+          name: "PurchasingPurchaseOrderView",
+          component: () =>
+            import("@/views/purchasing/order/purchase_orders/PurchaseOrderDetail.vue"),
+          meta: {
+            title: "Detail Purchase Order",
+            requiresAuth: true,
+            readOnly: true,
+          },
+        },
+        {
+          path: "/purchasing/order/purchase-orders/print/:id",
+          name: "PurchasingPurchaseOrderPrint",
+          component: () =>
+            import("@/views/purchasing/order/purchase_orders/PurchaseOrderPrintout.vue"),
+          meta: {
+            title: "Cetak Purchase Order",
+            requiresAuth: true,
+            readOnly: true,
+          },
+        },
+        {
+          path: "/purchasing/order/purchase_orders",
+          name: "PurchasingPurchaseOrdersUnderscore",
+          redirect: { name: "PurchasingPurchaseOrders" },
+        },
+
+        // 2.3 Pantau Status Pesanan (Tracking PO)
+        {
+          path: "/purchasing/order/tracking",
+          name: "PurchasingPoTracking",
+          component: () =>
+            import("@/views/purchasing/order/tracking/PoTrackingView.vue"),
+          meta: {
+            title: "Tracking PO",
             requiresAuth: true,
           },
         },
 
-        // Company Structure (Single page custom hierarchy view)
+        // 3.1 Input Barang Masuk (Goods Receipt)
         {
-          path: "/setup/m_company_structure",
-          name: "CompanyStructure",
+          path: "/purchasing/receiving/goods-receipts",
+          name: "PurchasingGoodsReceipts",
           component: () =>
-            import("@/views/setup/m_company_structure/CompanyStructureView.vue"),
+            import("@/views/purchasing/receiving/goods_receipts/GoodsReceiptLanding.vue"),
           meta: {
-            title: "Master Company Structure",
+            title: "Penerimaan Barang",
             requiresAuth: true,
           },
+        },
+        {
+          path: "/purchasing/receiving/goods-receipts/form",
+          name: "PurchasingGoodsReceiptForm",
+          component: () =>
+            import("@/views/purchasing/receiving/goods_receipts/GoodsReceiptForm.vue"),
+          meta: {
+            title: "Form Penerimaan Barang",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/receiving/goods-receipts/view/:id",
+          name: "PurchasingGoodsReceiptView",
+          component: () =>
+            import("@/views/purchasing/receiving/goods_receipts/GoodsReceiptDetail.vue"),
+          meta: {
+            title: "Detail Penerimaan Barang",
+            requiresAuth: true,
+            readOnly: true,
+          },
+        },
+        {
+          path: "/purchasing/receiving/goods_receipts",
+          name: "PurchasingGoodsReceiptsUnderscore",
+          redirect: { name: "PurchasingGoodsReceipts" },
+        },
+
+        // 3.2 Retur Pembelian (Barang Rusak / Expired)
+        {
+          path: "/purchasing/receiving/purchase-returns",
+          name: "PurchasingPurchaseReturns",
+          component: () =>
+            import("@/views/purchasing/receiving/purchase_returns/PurchaseReturnLanding.vue"),
+          meta: {
+            title: "Retur Pembelian",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/receiving/purchase-returns/form",
+          name: "PurchasingPurchaseReturnForm",
+          component: () =>
+            import("@/views/purchasing/receiving/purchase_returns/PurchaseReturnForm.vue"),
+          meta: {
+            title: "Form Retur Pembelian",
+            requiresAuth: true,
+          },
+        },
+
+        // 4.1 Verifikasi Nota Supplier (3-Way Matching)
+        {
+          path: "/purchasing/invoicing/invoices",
+          name: "PurchasingPurchaseInvoices",
+          component: () =>
+            import("@/views/purchasing/invoicing/invoices/PurchaseInvoiceLanding.vue"),
+          meta: {
+            title: "Verifikasi Nota Supplier",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/invoicing/invoices/verify/:poId",
+          name: "PurchasingPurchaseInvoiceVerify",
+          component: () =>
+            import("@/views/purchasing/invoicing/invoices/PurchaseInvoiceVerify.vue"),
+          meta: {
+            title: "Verifikasi Nota Supplier",
+            requiresAuth: true,
+          },
+        },
+
+        // 4.2 Jadwal Jatuh Tempo & Status Bayar
+        {
+          path: "/purchasing/invoicing/payables",
+          name: "PurchasingPayables",
+          component: () =>
+            import("@/views/purchasing/invoicing/payables/PayablesLanding.vue"),
+          meta: {
+            title: "Hutang & Pembayaran",
+            requiresAuth: true,
+          },
+        },
+
+        // 5.1 Laporan Riwayat Pembelian
+        {
+          path: "/purchasing/reports/purchase-history",
+          name: "PurchasingPurchaseHistoryReport",
+          component: () =>
+            import("@/views/purchasing/reports/purchase_history/PurchaseHistoryReport.vue"),
+          meta: {
+            title: "Laporan Riwayat Pembelian",
+            requiresAuth: true,
+          },
+        },
+
+        // --------------------------------------------------------------------
+        // Alias path Purchasing (pola sama seperti Inventory)
+        // Supaya path yang diketik di Setup Menu tetap valid walau memakai
+        // underscore atau hanya sampai level grup.
+        // --------------------------------------------------------------------
+        {
+          path: "/purchasing",
+          redirect: { name: "PurchasingSuppliers" },
+        },
+        {
+          path: "/purchasing/master",
+          redirect: { name: "PurchasingSuppliers" },
+        },
+        {
+          path: "/purchasing/order",
+          redirect: { name: "PurchasingAutoPr" },
+        },
+        {
+          path: "/purchasing/receiving",
+          redirect: { name: "PurchasingGoodsReceipts" },
+        },
+        {
+          path: "/purchasing/receiving/purchase_returns",
+          name: "PurchasingPurchaseReturnsUnderscore",
+          redirect: { name: "PurchasingPurchaseReturns" },
+        },
+        {
+          path: "/purchasing/invoicing",
+          redirect: { name: "PurchasingPurchaseInvoices" },
+        },
+        {
+          path: "/purchasing/reports",
+          redirect: { name: "PurchasingPurchaseHistoryReport" },
+        },
+        {
+          path: "/purchasing/reports/purchase_history",
+          name: "PurchasingPurchaseHistoryReportUnderscore",
+          redirect: { name: "PurchasingPurchaseHistoryReport" },
         },
 
         // Setting Dashboard (per role)
@@ -152,123 +372,182 @@ const router = createRouter({
           },
         },
 
-        // Component Showcase (Dev)
+        // ====================================================================
+        // MODUL 2 : INVENTORY - DAFTAR BARANG MINIMARKET (1.1)
+        // Mendukung path standar /inventory/master/items dan /inventory/master/m_items
+        // ====================================================================
         {
-          path: "/dev/component",
-          name: "Component",
-          component: () => import("@/views/dev/component/ComponentLanding.vue"),
+          path: "/inventory/master/items",
+          name: "MinimarketItems",
+          component: () =>
+            import("@/views/inventory/master/m_items/MinimarketItemsView.vue"),
           meta: {
-            title: "Component Showcase",
+            title: "Daftar Barang Minimarket",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/master/m_items",
+          name: "MinimarketItemsLegacyPath",
+          component: () =>
+            import("@/views/inventory/master/m_items/MinimarketItemsView.vue"),
+          meta: {
+            title: "Daftar Barang Minimarket",
             requiresAuth: true,
           },
         },
 
-        // Auto-generated CRUD routes (Setup, Purchasing, Inventory, Marketing)
+        // Inventory 1.2 - Kategori & Rak (zona RAK / GUDANG)
+        {
+          path: "/inventory/master/category-racks",
+          name: "InventoryCategoryRacks",
+          component: () =>
+            import("@/views/inventory/master/category_racks/CategoryRackView.vue"),
+          meta: {
+            title: "Kategori & Rak",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/master/category_racks",
+          name: "InventoryCategoryRacksUnderscore",
+          redirect: { name: "InventoryCategoryRacks" },
+        },
+
+        // Inventory 1.3 - Satuan & Konversi (multi-UOM)
+        {
+          path: "/inventory/master/uoms",
+          name: "InventoryUoms",
+          component: () =>
+            import("@/views/inventory/master/uoms/UomView.vue"),
+          meta: {
+            title: "Satuan & Konversi",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/master/m_uoms",
+          redirect: { name: "InventoryUoms" },
+        },
+
+        // Inventory 1.4 - Batas Pemesanan Barang (ROP)
+        {
+          path: "/inventory/rop",
+          name: "InventoryRop",
+          component: () =>
+            import("@/views/inventory/master/rop/RopView.vue"),
+          meta: {
+            title: "Batas Pemesanan (ROP)",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/master/rop",
+          redirect: { name: "InventoryRop" },
+        },
+
+        // Inventory 2.1 - Posisi Stok Real-Time
+        {
+          path: "/inventory/stok/positions",
+          name: "InventoryStockPositions",
+          component: () =>
+            import("@/views/inventory/stok/positions/StockPositionView.vue"),
+          meta: {
+            title: "Posisi Stok",
+            requiresAuth: true,
+          },
+        },
+
+        // Inventory 2.4 - Kartu Stok Kronologis
+        {
+          path: "/inventory/stok/cards",
+          name: "InventoryStockCards",
+          component: () =>
+            import("@/views/inventory/stok/cards/StockCardView.vue"),
+          meta: {
+            title: "Kartu Stok",
+            requiresAuth: true,
+          },
+        },
+
+        // Inventory 2.2 - Mutasi Gudang ke Rak (GUDANG/ADMIN/SUPER_ADMIN)
+        {
+          path: "/inventory/stok/mutations",
+          name: "InventoryStockMutations",
+          component: () =>
+            import("@/views/inventory/stok/mutations/StockMutationView.vue"),
+          meta: {
+            title: "Mutasi Stok",
+            requiresAuth: true,
+          },
+        },
+
+        // Inventory 2.3 - Barang Rusak / Hilang
+        {
+          path: "/inventory/stok/damaged",
+          name: "InventoryDamagedStock",
+          component: () =>
+            import("@/views/inventory/stok/damaged/DamagedStockView.vue"),
+          meta: {
+            title: "Barang Rusak",
+            requiresAuth: true,
+          },
+        },
+
+        // Inventory 3.1 - Hitung Fisik / Stock Opname
+        {
+          path: "/inventory/opname/fisik",
+          name: "InventoryOpnameFisik",
+          component: () =>
+            import("@/views/inventory/opname/fisik/OpnameLanding.vue"),
+          meta: {
+            title: "Hitung Fisik",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/opname/fisik/print/:id",
+          name: "InventoryOpnamePrint",
+          component: () =>
+            import("@/views/inventory/opname/print/OpnamePrintout.vue"),
+          meta: {
+            title: "Cetak Formulir Opname",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/opname/fisik/:id",
+          name: "InventoryOpnameCount",
+          component: () =>
+            import("@/views/inventory/opname/fisik/OpnameCount.vue"),
+          meta: {
+            title: "Formulir Hitung Fisik",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/opname",
+          redirect: { name: "InventoryOpnameFisik" },
+        },
+
+        // Inventory 3.2 - Penyesuaian Stok
+        {
+          path: "/inventory/opname/adjustment",
+          name: "InventoryOpnameAdjustment",
+          component: () =>
+            import("@/views/inventory/opname/adjustment/AdjustmentLanding.vue"),
+          meta: {
+            title: "Penyesuaian Stok",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/opname/adjustments",
+          redirect: { name: "InventoryOpnameAdjustment" },
+        },
+
+        // Auto-generated CRUD routes (Setup)
         ...crudRoutes,
-
-        // Surat Jalan Gudang - Print Route
-        {
-          path: "/inventory/transaksi/t_sj_gudang/print/:id",
-          name: "SjGudangPrint",
-          component: () =>
-            import("@/views/inventory/transaksi/t_sj_gudang/printout/SjGudangPrintout.vue"),
-          meta: {
-            title: "Cetak Surat Jalan Gudang",
-            requiresAuth: true,
-          },
-        },
-
-        // Surat Jalan Subcon - Print Route
-        {
-          path: "/purchasing/subcon/t_surat_jalan_subcon/print/:id",
-          name: "SjSubconPrint",
-          component: () =>
-            import("@/views/purchasing/subcon/t_surat_jalan_subcon/printout/SjSubconPrintout.vue"),
-          meta: {
-            title: "Cetak Surat Jalan Subcon",
-            requiresAuth: true,
-          },
-        },
-
-        {
-          path: "/purchasing/transaksi/t_purchase_order/print/:id",
-          name: "TPurchaseOrderPrint",
-          component: () =>
-            import("@/views/purchasing/transaksi/t_purchase_order/printout/TPurchaseOrderPrintout.vue"),
-          meta: {
-            title: "Cetak Purchase Order",
-            requiresAuth: true,
-          },
-        },
-        // Quality Control - Print Route
-        {
-          path: "/production/transaksi/t_qc/print/:id",
-          name: "QcPrint",
-          component: () =>
-            import("@/views/production/transaksi/t_qc/printout/QcPrintout.vue"),
-          meta: {
-            title: "Cetak Formulir Quality Control",
-            requiresAuth: true,
-          },
-        },
-
-        // Stock Opname - Print Route
-        {
-          path: "/inventory/transaksi/t_stock_opname/print/:id",
-          name: "StockOpnamePrint",
-          component: () =>
-            import("@/views/inventory/transaksi/t_stock_opname/printout/StockOpnamePrintout.vue"),
-          meta: {
-            title: "Cetak Formulir Stock Opname",
-            requiresAuth: true,
-          },
-        },
-        {
-          path: "/inventory/transaksi/t_stock_opname_periode/print/:id",
-          name: "StockOpnamePeriodePrint",
-          component: () =>
-            import("@/views/inventory/transaksi/t_stock_opname_periode/printout/StockOpnamePeriodePrintout.vue"),
-          meta: {
-            title: "Cetak Berita Acara Periode Stock Opname",
-            requiresAuth: true,
-          },
-        },
-
-        // Info Stock Gudang (Single page view, no form/view)
-        {
-          path: "/inventory/transaksi/stock_gudang",
-          name: "StockGudang",
-          component: () =>
-            import("@/views/inventory/transaksi/info_stock/InfoStockView.vue"),
-          meta: {
-            title: "Info Stock Gudang",
-            requiresAuth: true,
-          },
-        },
-
-        // Info Stock per Item (Single page view, no form/view)
-        {
-          path: "/inventory/transaksi/stock_gudang_2",
-          name: "StockGudang2",
-          component: () =>
-            import("@/views/inventory/transaksi/info_stock_2/InfoStock2View.vue"),
-          meta: {
-            title: "Info Stock per Item",
-            requiresAuth: true,
-          },
-        },
-
-        // master pricelist form
-        {
-          path: "/marketing/master/m_pricelist",
-          name: "Pricelist",
-          component: () =>
-            import("@/views/marketing/master/m_pricelist/PricelistForm.vue"),
-          meta: {
-            title: "Master Price List",
-            requiresAuth: true,
-          },
-        },
 
         // ============================================================================
         // 404 NOT FOUND - CATCH ALL ROUTE (MUST BE LAST IN CHILDREN)

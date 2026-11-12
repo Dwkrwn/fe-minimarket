@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore, type SessionUser } from '@/stores/auth'
 import { login, getCurrentUser } from '@/lib/api'
@@ -11,33 +11,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import GlobalDialog from '@/components/dialog/GlobalDialog.vue'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { LogIn, Eye, EyeOff, Moon, Sun, SwatchBook } from 'lucide-vue-next'
-const THEME_STORAGE_KEY = 'bb_color_theme'
-// Available themes with their display colors
-const themes = [
-  { name: 'default', label: 'Default', color: 'hsl(213, 94%, 20%)' },
-  { name: 'zinc', label: 'Zinc', color: 'hsl(240, 5%, 26%)' },
-  { name: 'slate', label: 'Slate', color: 'hsl(215, 20%, 25%)' },
-  { name: 'stone', label: 'Stone', color: 'hsl(25, 6%, 25%)' },
-  { name: 'gray', label: 'Gray', color: 'hsl(220, 9%, 26%)' },
-  { name: 'neutral', label: 'Neutral', color: 'hsl(0, 0%, 23%)' },
-  { name: 'red', label: 'Red', color: 'hsl(0, 72%, 51%)' },
-  { name: 'rose', label: 'Rose', color: 'hsl(347, 77%, 50%)' },
-  { name: 'orange', label: 'Orange', color: 'hsl(25, 95%, 53%)' },
-  { name: 'green', label: 'Green', color: 'hsl(142, 71%, 45%)' },
-  { name: 'blue', label: 'Blue', color: 'hsl(217, 91%, 60%)' },
-  { name: 'yellow', label: 'Yellow', color: 'hsl(48, 96%, 53%)' },
-  { name: 'violet', label: 'Violet', color: 'hsl(263, 70%, 50%)' },
+import { LogIn, Eye, EyeOff, Moon, Sun } from 'lucide-vue-next'
+const LEGACY_THEME_KEY = 'bb_color_theme'
+const LEGACY_THEME_NAMES = [
+  'zinc', 'slate', 'stone', 'gray', 'neutral', 'red', 'rose',
+  'orange', 'green', 'blue', 'yellow', 'violet',
 ]
-const currentTheme = ref('default')
 const router = useRouter()
 const authStore = useAuthStore()
 const username = ref('')
@@ -46,9 +25,8 @@ const showPassword = ref(false)
 const loading = ref(false)
 const isDark = ref(false)
 const showWarningDialog = ref(false)
-// Initialize dark mode and color theme from localStorage
+// Inisialisasi mode gelap dan bersihkan sisa pemilih warna lama
 onMounted(() => {
-  // Load dark mode
   const savedTheme = localStorage.getItem('theme')
   isDark.value = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
   if (isDark.value) {
@@ -56,8 +34,8 @@ onMounted(() => {
   } else {
     document.documentElement.classList.remove('dark')
   }
-  // Load color theme
-  loadColorTheme()
+  LEGACY_THEME_NAMES.forEach(name => document.documentElement.classList.remove(`theme-${name}`))
+  localStorage.removeItem(LEGACY_THEME_KEY)
 })
 const toggleDarkMode = () => {
   isDark.value = !isDark.value
@@ -69,37 +47,10 @@ const toggleDarkMode = () => {
     localStorage.setItem('theme', 'light')
   }
 }
-// Color theme handling
-const loadColorTheme = () => {
-  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)
-  if (savedTheme && themes.some(t => t.name === savedTheme)) {
-    currentTheme.value = savedTheme
-    applyColorTheme(savedTheme)
-  }
-}
-const applyColorTheme = (themeName: string) => {
-  // Remove all theme classes
-  themes.forEach(t => {
-    document.documentElement.classList.remove(`theme-${t.name}`)
-  })
-  // Add new theme class (except default which has no class)
-  if (themeName !== 'default') {
-    document.documentElement.classList.add(`theme-${themeName}`)
-  }
-}
-const setColorTheme = (themeName: string) => {
-  currentTheme.value = themeName
-  localStorage.setItem(THEME_STORAGE_KEY, themeName)
-  applyColorTheme(themeName)
-}
-const getCurrentThemeColor = computed(() => {
-  const theme = themes.find(t => t.name === currentTheme.value)
-  return theme?.color || 'hsl(213, 94%, 20%)'
-})
 const handleLogin = async () => {
   if (!username.value || !password.value) {
-    toast.error('Validasi Gagal', {
-      description: 'Username dan password harus diisi'
+    toast.error('Belum lengkap', {
+      description: 'Nama pengguna dan kata sandi harus diisi.'
     })
     return
   }
@@ -186,21 +137,21 @@ const handleLogin = async () => {
         authStore.saveApprovalList([])
       }
       // Step 6: Show success message
-      toast.success('Login Berhasil!', {
-        description: `Selamat datang kembali, ${userData.name}`
+      toast.success('Berhasil masuk', {
+        description: `Selamat datang, ${userData.name}.`
       })
       // Step 7: Redirect to dashboard after short delay
       setTimeout(() => {
         router.push('/')
       }, 500)
     } else {
-      toast.error('Login Gagal', {
-        description: 'Terjadi kesalahan, silakan coba lagi'
+      toast.error('Gagal masuk', {
+        description: 'Terjadi kesalahan. Silakan coba lagi.'
       })
     }
   } catch (err) {
-    toast.error('Login Gagal', {
-      description: err instanceof Error ? err.message : 'Username atau password salah'
+    toast.error('Gagal masuk', {
+      description: err instanceof Error ? err.message : 'Nama pengguna atau kata sandi salah.'
     })
   } finally {
     loading.value = false
@@ -223,101 +174,105 @@ const togglePasswordVisibility = () => {
 }
 </script>
 <template>
-  <div
-    class="relative flex min-h-screen items-center justify-center p-4 bg-linear-to-br from-primary/5 via-background to-primary/10 dark:from-primary/10 dark:via-background dark:to-primary/5">
-    <!-- Theme Controls -->
-    <div class="absolute top-4 right-4 z-50 flex items-center gap-2">
-      <!-- Color Theme Picker -->
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <button
-            class="flex h-9 w-9 items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all duration-300 border border-primary/20 dark:border-primary/30 bg-background hover:bg-primary/10"
-            title="Change Color Theme">
-            <SwatchBook class="h-4 w-4 text-muted-foreground" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" class="w-40">
-          <DropdownMenuLabel class="text-xs">Color Theme</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <div class="max-h-[168px] overflow-y-auto">
-            <DropdownMenuItem v-for="theme in themes" :key="theme.name" class="flex items-center gap-2 cursor-pointer"
-              :class="currentTheme === theme.name ? 'bg-primary/10' : ''" @click="setColorTheme(theme.name)">
-              <div class="h-4 w-4 rounded-full border border-border shrink-0"
-                :style="{ backgroundColor: theme.color }" />
-              <span class="text-sm">{{ theme.label }}</span>
-              <span v-if="currentTheme === theme.name" class="ml-auto text-primary">✓</span>
-            </DropdownMenuItem>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <!-- Dark Mode Toggle Button -->
-      <button @click="toggleDarkMode"
-        class="flex h-9 w-9 items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all duration-300 border border-primary/20 dark:border-primary/30 bg-background hover:bg-primary/10"
-        :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
-        <Sun v-if="!isDark" class="h-4 w-4 text-muted-foreground" />
-        <Moon v-else class="h-4 w-4 text-muted-foreground" />
+  <div class="relative flex min-h-screen flex-col items-center justify-center bg-background p-4">
+    <!-- Mode gelap/terang -->
+    <div class="absolute right-4 top-4 z-50">
+      <button
+        type="button"
+        class="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        :title="isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
+        :aria-label="isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
+        @click="toggleDarkMode"
+      >
+        <Sun v-if="isDark" class="h-5 w-5" />
+        <Moon v-else class="h-5 w-5" />
       </button>
     </div>
-    <Card class="w-full max-w-md shadow-2xl border-primary/20 dark:border-primary/30 dark:bg-card/50 backdrop-blur-sm"
-      v-motion :initial="{ opacity: 0, y: 20 }" :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
-      <CardHeader class="space-y-1 text-center">
-        <div class="mx-auto mb-4 flex h-20 items-center justify-center">
+
+    <Card class="w-full max-w-sm border-border shadow-sm">
+      <CardHeader class="space-y-2 text-center">
+        <div class="mx-auto mb-2 flex h-16 items-center justify-center">
           <img src="/miniMarketLogo.png" alt="Mini Market" class="h-full w-auto object-contain" />
         </div>
-        <CardTitle class="text-2xl font-bold">Selamat Datang</CardTitle>
-        <CardDescription>Login ke Mini Market</CardDescription>
+        <CardTitle class="text-2xl font-semibold">Mini Market</CardTitle>
+        <CardDescription class="text-sm">Masuk untuk mulai bekerja.</CardDescription>
       </CardHeader>
+
       <form @submit.prevent="handleLogin">
         <CardContent class="space-y-4">
-          <!-- Username Field -->
           <div class="space-y-2">
-            <Label for="username">Username</Label>
-            <Input id="username" v-model="username" type="text" placeholder="Masukkan username" :disabled="loading"
-              autocomplete="username" class="transition-all focus:ring-2 focus:ring-primary/20" />
+            <Label for="username" class="text-sm">Nama pengguna</Label>
+            <Input
+              id="username"
+              v-model="username"
+              type="text"
+              placeholder="Masukkan nama pengguna"
+              :disabled="loading"
+              autocomplete="username"
+              class="h-11"
+            />
           </div>
-          <!-- Password Field -->
+
           <div class="space-y-2">
-            <Label for="password">Password</Label>
+            <Label for="password" class="text-sm">Kata sandi</Label>
             <div class="relative">
-              <Input id="password" v-model="password" :type="showPassword ? 'text' : 'password'"
-                placeholder="Masukkan password" :disabled="loading" autocomplete="current-password"
-                class="pr-10 transition-all focus:ring-2 focus:ring-primary/20" />
-              <button type="button" @click="togglePasswordVisibility"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                :disabled="loading">
+              <Input
+                id="password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Masukkan kata sandi"
+                :disabled="loading"
+                autocomplete="current-password"
+                class="h-11 pr-11"
+              />
+              <button
+                type="button"
+                class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                :disabled="loading"
+                :aria-label="showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
+                @click="togglePasswordVisibility"
+              >
                 <Eye v-if="!showPassword" class="h-4 w-4" />
                 <EyeOff v-else class="h-4 w-4" />
               </button>
             </div>
           </div>
         </CardContent>
+
         <CardFooter>
-          <Button type="submit" class="w-full" :disabled="loading">
+          <Button type="submit" class="h-11 w-full text-sm font-semibold" :disabled="loading">
             <span v-if="loading" class="flex items-center gap-2">
-              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor"
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                 </path>
               </svg>
-              Loading...
+              Memuat...
             </span>
             <span v-else class="flex items-center gap-2">
               <LogIn class="h-4 w-4" />
-              Login
+              Masuk
             </span>
           </Button>
         </CardFooter>
       </form>
     </Card>
-    <!-- Footer -->
-    <div class="absolute bottom-4 text-center text-xs text-muted-foreground">
-      <p>&copy; 2025 Mini Market. All rights reserved.</p>
-    </div>
-    <!-- Warning Dialog - User tidak punya role -->
-    <GlobalDialog :open="showWarningDialog" type="warning" title="Akses Ditolak"
-      description="User yang Anda pilih belum dikonfigurasi untuk ROLE. Silakan hubungi administrator anda untuk mengatur role terlebih dahulu."
-      confirmText="Ok" :show-cancel="false" @confirm="handleWarningConfirm"
-      @update:open="(v) => !v && handleWarningConfirm()" />
+
+    <p class="mt-6 text-center text-xs text-muted-foreground">
+      &copy; 2025 Mini Market. Hak cipta dilindungi.
+    </p>
+
+    <!-- Dialog: pengguna belum punya peran -->
+    <GlobalDialog
+      :open="showWarningDialog"
+      type="warning"
+      title="Akses ditolak"
+      description="Akun ini belum memiliki peran yang diatur. Silakan hubungi administrator untuk mengatur peran terlebih dahulu."
+      confirmText="Mengerti"
+      :show-cancel="false"
+      @confirm="handleWarningConfirm"
+      @update:open="(v) => !v && handleWarningConfirm()"
+    />
   </div>
 </template>

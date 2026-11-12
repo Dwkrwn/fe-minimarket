@@ -170,7 +170,7 @@ function getApprovalByPath(
 }
 
 // Supplier path constant
-const SUPPLIER_PATH = "/purchasing/master/m_supplier";
+const SUPPLIER_PATH = "/purchasing/master/suppliers";
 
 // ============================================================================
 // API FUNCTIONS

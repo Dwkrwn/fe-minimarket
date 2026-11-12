@@ -203,7 +203,7 @@ function getApprovalByPath(path: string): { id: string; sender_id: string; level
 }
 
 // Purchase Order path constant
-const PO_PATH = '/purchasing/transaksi/t_purchase_order'
+const PO_PATH = '/purchasing/order/purchase-orders'
 
 // ============================================================================
 // API FUNCTIONS

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch, onUnmounted } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
-import { SwatchBook, MessageSquare } from "lucide-vue-next";
+import { Bell, MessageSquare, Moon, Sun } from "lucide-vue-next";
 import AppSidebar from "@/components/AppSidebar.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useChatbot } from "@/composables/useChatbot";
@@ -10,61 +10,42 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-} from "@/components/ui/dropdown-menu";
 import { getUnifiedNotifications } from "@/views/notifikasi/service";
 
 const { isOpen, toggleChat } = useChatbot();
 
 const NOTIFICATION_STORAGE_KEY = "bb_read_notifications";
-const THEME_STORAGE_KEY = "bb_color_theme";
-
-// Available themes with their display colors
-const themes = [
-  { name: "default", label: "Default", color: "hsl(213, 94%, 20%)" },
-  { name: "zinc", label: "Zinc", color: "hsl(240, 5%, 26%)" },
-  { name: "slate", label: "Slate", color: "hsl(215, 20%, 25%)" },
-  { name: "stone", label: "Stone", color: "hsl(25, 6%, 25%)" },
-  { name: "gray", label: "Gray", color: "hsl(220, 9%, 26%)" },
-  { name: "neutral", label: "Neutral", color: "hsl(0, 0%, 23%)" },
-  { name: "red", label: "Red", color: "hsl(0, 72%, 51%)" },
-  { name: "rose", label: "Rose", color: "hsl(347, 77%, 50%)" },
-  { name: "orange", label: "Orange", color: "hsl(25, 95%, 53%)" },
-  { name: "green", label: "Green", color: "hsl(142, 71%, 45%)" },
-  { name: "blue", label: "Blue", color: "hsl(217, 91%, 60%)" },
-  { name: "yellow", label: "Yellow", color: "hsl(48, 96%, 53%)" },
-  { name: "violet", label: "Violet", color: "hsl(263, 70%, 50%)" },
+const LEGACY_THEME_KEY = "bb_color_theme";
+const LEGACY_THEME_NAMES = [
+  "zinc",
+  "slate",
+  "stone",
+  "gray",
+  "neutral",
+  "red",
+  "rose",
+  "orange",
+  "green",
+  "blue",
+  "yellow",
+  "violet",
 ];
-
-const currentTheme = ref("default");
 
 const route = useRoute();
 const router = useRouter();
-const pageTitle = computed(() => route.meta.title || "Dashboard");
 
-// Current date/time
+const pageTitleMap: Record<string, string> = {
+  Dashboard: "Dasbor",
+  Documentation: "Panduan",
+  Login: "Masuk",
+};
+const pageTitle = computed(
+  () => pageTitleMap[route.meta.title as string] || (route.meta.title as string) || "Dasbor",
+);
+
+// Tanggal & jam dalam bahasa Indonesia
 const currentDateTime = ref(new Date());
-
-// Format day name in Indonesian
-const dayNames = [
-  "Minggu",
-  "Senin",
-  "Selasa",
-  "Rabu",
-  "Kamis",
-  "Jumat",
-  "Sabtu",
-];
+const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const monthNames = [
   "Januari",
   "Februari",
@@ -82,21 +63,16 @@ const monthNames = [
 
 const formattedDate = computed(() => {
   const date = currentDateTime.value;
-  const dayName = dayNames[date.getDay()];
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = monthNames[date.getMonth()]?.toUpperCase() || "";
-  const year = date.getFullYear();
-  return `${dayName}, ${day}.${month}.${year}`;
+  return `${dayNames[date.getDay()]}, ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
 });
 
-const formattedTime = computed(() => {
-  return currentDateTime.value.toLocaleTimeString("id-ID", {
+const formattedTime = computed(() =>
+  currentDateTime.value.toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hour12: false,
-  });
-});
+  }),
+);
 
 const timeOfDay = computed(() => {
   const hour = currentDateTime.value.getHours();
@@ -106,27 +82,23 @@ const timeOfDay = computed(() => {
   return "Malam";
 });
 
-// Update time every second
 let timeInterval: ReturnType<typeof setInterval>;
 
-// Notification count
+// Notifikasi
 const notificationCount = ref(0);
 const readNotificationIds = ref<Set<string>>(new Set());
 
-// Load read notifications from localStorage
 const loadReadNotifications = () => {
   try {
     const stored = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
     if (stored) {
-      const ids = JSON.parse(stored) as string[];
-      readNotificationIds.value = new Set(ids);
+      readNotificationIds.value = new Set(JSON.parse(stored) as string[]);
     }
   } catch (e) {
-    console.error("Failed to load read notifications:", e);
+    console.error("Gagal membaca status notifikasi:", e);
   }
 };
 
-// Fetch notification counts
 const fetchNotificationCounts = async (forceRefresh = false) => {
   if (!useAuthStore().user?.capabilities?.notifications) return;
   try {
@@ -136,12 +108,10 @@ const fetchNotificationCounts = async (forceRefresh = false) => {
     const approvalRows = unifiedResponse.data?.approval || [];
     const revisiRows = unifiedResponse.data?.revisi || [];
 
-    // Collect all valid IDs from API response
     const validIds = new Set<string>(
       (unifiedResponse.active_ids || []).map((id) => String(id)),
     );
 
-    // Remove stale IDs from localStorage that no longer exist in API
     const cleanedIds = [...readNotificationIds.value].filter((id) =>
       validIds.has(id),
     );
@@ -162,12 +132,11 @@ const fetchNotificationCounts = async (forceRefresh = false) => {
 
     notificationCount.value = approvalUnread + revisiUnread;
   } catch (error) {
-    console.error("Failed to load notification counts:", error);
+    console.error("Gagal memuat jumlah notifikasi:", error);
     notificationCount.value = 0;
   }
 };
 
-// Handle notification read event
 const handleNotificationRead = () => {
   loadReadNotifications();
   fetchNotificationCounts();
@@ -177,7 +146,6 @@ const handleNotificationsUpdated = () => {
   fetchNotificationCounts(true);
 };
 
-// Handle storage change (cross-tab sync)
 const handleStorageChange = (e: StorageEvent) => {
   if (e.key === NOTIFICATION_STORAGE_KEY) {
     loadReadNotifications();
@@ -185,16 +153,33 @@ const handleStorageChange = (e: StorageEvent) => {
   }
 };
 
-// Go to notifications page
 const goToNotifications = () => {
   router.push("/notifikasi");
 };
 
-// Dark mode toggle
+// Mode gelap/terang
 const isDark = ref(false);
 
+const toggleTheme = () => {
+  isDark.value = !isDark.value;
+  if (isDark.value) {
+    document.documentElement.classList.add("dark");
+    localStorage.setItem("theme", "dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+    localStorage.setItem("theme", "light");
+  }
+};
+
+// Bersihkan sisa pemilih warna tema lama agar tampilan kembali netral
+const cleanupLegacyThemes = () => {
+  LEGACY_THEME_NAMES.forEach((name) => {
+    document.documentElement.classList.remove(`theme-${name}`);
+  });
+  localStorage.removeItem(LEGACY_THEME_KEY);
+};
+
 onMounted(() => {
-  // Check if user has a preference in localStorage
   const savedTheme = localStorage.getItem("theme");
   if (savedTheme === "dark") {
     isDark.value = true;
@@ -203,25 +188,19 @@ onMounted(() => {
     isDark.value = false;
     document.documentElement.classList.remove("dark");
   } else {
-    // Check system preference
     isDark.value = window.matchMedia("(prefers-color-scheme: dark)").matches;
     if (isDark.value) {
       document.documentElement.classList.add("dark");
     }
   }
 
-  // Load color theme
-  loadColorTheme();
-
-  // Fetch notification counts
+  cleanupLegacyThemes();
   fetchNotificationCounts(true);
 
-  // Start time interval
   timeInterval = setInterval(() => {
     currentDateTime.value = new Date();
-  }, 1000);
+  }, 15000);
 
-  // Listen for notification events
   window.addEventListener("notificationRead", handleNotificationRead);
   window.addEventListener("notificationsUpdated", handleNotificationsUpdated);
   window.addEventListener("storage", handleStorageChange);
@@ -237,11 +216,9 @@ onUnmounted(() => {
   clearInterval(timeInterval);
 });
 
-// Refresh notification counts periodically every 5 minutes
-const notificationInterval = setInterval(fetchNotificationCounts, 300000); // 5 minutes (300000ms)
+const notificationInterval = setInterval(fetchNotificationCounts, 300000);
 onUnmounted(() => clearInterval(notificationInterval));
 
-// Watch route changes to refresh notification counts on every menu change
 watch(
   () => route.path,
   async () => {
@@ -249,95 +226,16 @@ watch(
   },
 );
 
-const toggleTheme = () => {
-  isDark.value = !isDark.value;
-  if (isDark.value) {
-    document.documentElement.classList.add("dark");
-    localStorage.setItem("theme", "dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-    localStorage.setItem("theme", "light");
-  }
-};
-
-// Color theme handling
-const loadColorTheme = () => {
-  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-  if (savedTheme && themes.some((t) => t.name === savedTheme)) {
-    currentTheme.value = savedTheme;
-    applyColorTheme(savedTheme);
-  }
-};
-
-const applyColorTheme = (themeName: string) => {
-  // Remove all theme classes
-  themes.forEach((t) => {
-    document.documentElement.classList.remove(`theme-${t.name}`);
-  });
-
-  // Add new theme class (except default which has no class)
-  if (themeName !== "default") {
-    document.documentElement.classList.add(`theme-${themeName}`);
-  }
-};
-
-const setColorTheme = (themeName: string) => {
-  currentTheme.value = themeName;
-  localStorage.setItem(THEME_STORAGE_KEY, themeName);
-  applyColorTheme(themeName);
-};
-
-const getCurrentThemeColor = computed(() => {
-  const theme = themes.find((t) => t.name === currentTheme.value);
-  return theme?.color || "hsl(213, 94%, 20%)";
-});
-
-// Page transition animations
-const onBeforeEnter = (el: Element) => {
-  const element = el as HTMLElement;
-  element.style.opacity = "0";
-  element.style.transform = "translateY(10px)";
-};
-
-const onEnter = (el: Element, done: () => void) => {
-  const element = el as HTMLElement;
-  element.style.transition = "opacity 0.3s ease-out, transform 0.3s ease-out";
-
-  requestAnimationFrame(() => {
-    element.style.opacity = "1";
-    element.style.transform = "translateY(0)";
-  });
-
-  setTimeout(done, 300);
-};
-
-const onLeave = (el: Element, done: () => void) => {
-  const element = el as HTMLElement;
-  element.style.transition = "opacity 0.2s ease-in, transform 0.2s ease-in";
-  element.style.opacity = "0";
-  element.style.transform = "translateY(-10px)";
-
-  setTimeout(done, 200);
-};
-
-// Auto-close sidebar on mobile when route changes
-// Watch route changes to close mobile sidebar
+// Tutup sidebar di layar kecil saat pindah halaman
 watch(
   () => route.path,
-  (newPath) => {
-    // Close mobile sidebar on route change immediately
+  () => {
     const isMobile = window.innerWidth <= 768;
     if (isMobile) {
-      const event = new CustomEvent("closeMobileSidebar");
-      window.dispatchEvent(event);
-
-      // Also try to close by finding and clicking the overlay/trigger
+      window.dispatchEvent(new CustomEvent("closeMobileSidebar"));
       setTimeout(() => {
-        // Find sidebar overlay and click it to close
         const overlay = document.querySelector('[data-sidebar="overlay"]');
-        if (overlay) {
-          (overlay as HTMLElement).click();
-        }
+        if (overlay) (overlay as HTMLElement).click();
       }, 50);
     }
   },
@@ -346,196 +244,76 @@ watch(
 </script>
 
 <template>
-  <SidebarProvider :default-open="true" ref="sidebarProvider">
+  <SidebarProvider :default-open="true">
     <AppSidebar />
-    <SidebarInset class="overflow-hidden">
-      <!-- Topbar (Droitdash SaaS Header) -->
+    <SidebarInset class="min-w-0 overflow-hidden bg-background">
       <header
-        class="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border/70 bg-background/85 backdrop-blur-xl px-6 transition-all duration-200"
+        class="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6"
       >
-        <SidebarTrigger class="rounded-xl border border-border/60 hover:bg-card hover:border-border transition-all duration-200" />
-        <Separator orientation="vertical" class="h-6 opacity-60" />
+        <div class="flex items-center gap-3">
+          <SidebarTrigger
+            class="h-10 w-10 shrink-0 rounded-lg border border-border bg-card text-foreground hover:bg-muted"
+          />
 
-        <div class="flex flex-1 items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <span class="h-2 w-2 rounded-full bg-primary ring-4 ring-primary/20 animate-pulse"></span>
-            <h1 class="text-xl font-bold tracking-tight text-foreground">{{ pageTitle }}</h1>
+          <div class="min-w-0 flex-1">
+            <p class="hidden text-xs text-muted-foreground sm:block">
+              {{ formattedDate }} &middot; {{ timeOfDay }} {{ formattedTime }}
+            </p>
+            <h1 class="truncate text-lg font-semibold text-foreground md:text-xl">
+              {{ pageTitle }}
+            </h1>
           </div>
 
-          <div class="flex items-center gap-2.5">
-            <!-- Controls Group Pill -->
-            <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-card border border-border/80 shadow-xs">
-              <!-- Notification Bell -->
-              <button
-                @click="goToNotifications"
-                class="group relative flex h-9 w-9 items-center justify-center rounded-xl hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200"
-                title="Notifications"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="transition-all duration-300 group-hover:scale-110"
-                  :class="{ 'animate-wiggle text-primary': notificationCount > 0 }"
-                >
-                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                </svg>
-                <!-- Badge -->
-                <span
-                  v-if="notificationCount > 0"
-                  class="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow-xs animate-bounce"
-                >
-                  {{ notificationCount > 99 ? "99+" : notificationCount }}
-                </span>
-              </button>
-
-              <!-- Chatbot Button -->
-              <button
-                @click="toggleChat"
-                :class="[
-                  'group relative flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 z-[10001]',
-                  isOpen
-                    ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30 ring-2 ring-primary/40'
-                    : 'hover:bg-muted/80 text-muted-foreground hover:text-primary',
-                ]"
-                title="Chat Assistant"
-              >
-                <MessageSquare
-                  class="h-[18px] w-[18px] transition-all duration-300 group-hover:scale-110"
-                />
-              </button>
-
-              <!-- Theme Color Switcher -->
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <button
-                    class="group flex h-9 items-center gap-2 px-2.5 rounded-xl hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200"
-                    title="Change Theme Color"
-                  >
-                    <SwatchBook
-                      class="h-[18px] w-[18px] transition-all duration-300 group-hover:scale-110"
-                    />
-                    <span
-                      class="hidden sm:flex items-center gap-1.5 text-xs font-medium"
-                    >
-                      <span
-                        class="h-3 w-3 rounded-full border border-border shadow-xs"
-                        :style="{ backgroundColor: getCurrentThemeColor }"
-                      ></span>
-                      {{
-                        themes.find((t) => t.name === currentTheme)?.label ||
-                        "Default"
-                      }}
-                    </span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-48 p-1.5 rounded-2xl shadow-xl border border-border/80">
-                  <DropdownMenuLabel class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground"
-                    >Theme Color</DropdownMenuLabel
-                  >
-                  <DropdownMenuSeparator class="my-1" />
-                  <div class="max-h-[168px] overflow-y-auto theme-scrollbar space-y-0.5">
-                    <DropdownMenuRadioGroup :model-value="currentTheme">
-                      <DropdownMenuRadioItem
-                        v-for="theme in themes"
-                        :key="theme.name"
-                        :value="theme.name"
-                        @click="setColorTheme(theme.name)"
-                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl cursor-pointer text-xs font-medium transition-colors"
-                      >
-                        <span
-                          class="h-3.5 w-3.5 rounded-full border border-border shadow-xs shrink-0"
-                          :style="{ backgroundColor: theme.color }"
-                        ></span>
-                        <span>{{ theme.label }}</span>
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <!-- Dark/Light Mode Toggle -->
-              <button
-                @click="toggleTheme"
-                class="group flex h-9 w-9 items-center justify-center rounded-xl hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200"
-                :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
-              >
-                <!-- Sun Icon (Light Mode) -->
-                <svg
-                  v-if="!isDark"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="group-hover:rotate-45 transition-transform duration-300"
-                >
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2" />
-                  <path d="M12 20v2" />
-                  <path d="m4.93 4.93 1.41 1.41" />
-                  <path d="m17.66 17.66 1.41 1.41" />
-                  <path d="M2 12h2" />
-                  <path d="M20 12h2" />
-                  <path d="m6.34 17.66-1.41 1.41" />
-                  <path d="m19.07 4.93-1.41 1.41" />
-                </svg>
-
-                <!-- Moon Icon (Dark Mode) -->
-                <svg
-                  v-else
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="group-hover:rotate-[-15deg] transition-transform duration-300"
-                >
-                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-                </svg>
-              </button>
-            </div>
-
-            <!-- Date & Time Display Badge -->
-            <div
-              class="hidden lg:flex items-center gap-3 px-3.5 py-1.5 rounded-2xl bg-card border border-border/80 shadow-xs leading-tight"
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              class="relative flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Buka notifikasi"
+              aria-label="Buka notifikasi"
+              @click="goToNotifications"
             >
-              <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <div class="flex flex-col text-right">
-                <span class="text-xs font-semibold text-foreground tracking-tight">{{ formattedDate }}</span>
-                <span class="text-[11px] font-mono text-muted-foreground">{{ timeOfDay }} &bull; {{ formattedTime }}</span>
-              </div>
-            </div>
+              <Bell class="h-5 w-5" />
+              <span
+                v-if="notificationCount > 0"
+                class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground"
+              >
+                {{ notificationCount > 99 ? "99+" : notificationCount }}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
+              :class="
+                isOpen
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              "
+              title="Buka asisten"
+              aria-label="Buka asisten"
+              @click="toggleChat"
+            >
+              <MessageSquare class="h-5 w-5" />
+            </button>
+
+            <button
+              type="button"
+              class="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              :title="isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
+              :aria-label="isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
+              @click="toggleTheme"
+            >
+              <Sun v-if="isDark" class="h-5 w-5" />
+              <Moon v-else class="h-5 w-5" />
+            </button>
           </div>
         </div>
       </header>
 
-      <!-- Main Content -->
       <main class="flex-1">
-        <RouterView v-slot="{ Component, route }">
-          <Transition
-            name="page"
-            mode="out-in"
-            @before-enter="onBeforeEnter"
-            @enter="onEnter"
-            @leave="onLeave"
-          >
-            <div :key="route.path">
+        <RouterView v-slot="{ Component, route: currentRoute }">
+          <Transition name="page" mode="out-in">
+            <div :key="currentRoute.path">
               <component :is="Component" v-if="Component" />
             </div>
           </Transition>
@@ -546,51 +324,13 @@ watch(
 </template>
 
 <style scoped>
-@keyframes wiggle {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-
-  25% {
-    transform: rotate(-10deg);
-  }
-
-  50% {
-    transform: rotate(10deg);
-  }
-
-  75% {
-    transform: rotate(-5deg);
-  }
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.15s ease;
 }
 
-.animate-wiggle {
-  animation: wiggle 0.5s ease-in-out infinite;
-  animation-delay: 2s;
-  animation-iteration-count: 3;
-}
-
-/* Theme-aware scrollbar */
-:deep(.theme-scrollbar) {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--primary)) transparent;
-}
-
-:deep(.theme-scrollbar)::-webkit-scrollbar {
-  width: 6px;
-}
-
-:deep(.theme-scrollbar)::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-:deep(.theme-scrollbar)::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--primary));
-  border-radius: 3px;
-}
-
-:deep(.theme-scrollbar)::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--primary) / 0.8);
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
 }
 </style>

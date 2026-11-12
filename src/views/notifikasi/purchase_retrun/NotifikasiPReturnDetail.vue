@@ -396,7 +396,7 @@ const handleApproval = async (status: "APPROVED" | "REVISI") => {
     const approvalList = authStore.getApprovalList();
     const prApproval = approvalList.find(
       (a: any) =>
-        a.path === "/purchasing/transaksi/t_purchase_return" &&
+        a.path === "/purchasing/receiving/purchase-returns" &&
         a.tipe_approve?.toUpperCase() === "MENYETUJUI",
     );
 
@@ -480,7 +480,7 @@ const handleReject = async () => {
     const approvalList = authStore.getApprovalList();
     const prApproval = approvalList.find(
       (a: any) =>
-        a.path === "/purchasing/transaksi/t_purchase_return" &&
+        a.path === "/purchasing/receiving/purchase-returns" &&
         a.tipe_approve?.toUpperCase() === "MENYETUJUI",
     );
 

@@ -55,20 +55,6 @@ export {
   rejectPurchaseInvoice,
 } from "./pi/service.pi";
 
-// Re-export from Purchase Request Close service
-export {
-  type TPurchaseRequestCloseNotification,
-  type TPurchaseRequestCloseNotificationResponse,
-  getTPurchaseRequestCloseNotifications,
-  getTPurchaseRequestCloseRevisiNotifications,
-  getPendingTPurchaseRequestCloseNotifications,
-  getTPurchaseRequestCloseCombinedSenderNotifications,
-  markTPurchaseRequestCloseNotificationAsRead,
-  approveTPurchaseRequestClose,
-  reviseTPurchaseRequestClose,
-  rejectTPurchaseRequestClose,
-} from "./purchase_request_close/service.purchase_request_close";
-
 // Re-export from Purchase Return service
 export {
   type PurchaseReturnNotification,
@@ -125,158 +111,15 @@ export {
   rejectStockOpname,
 } from "./stock_opname/service.stock_opname";
 
-// Re-export from Stock Adj service
-export {
-  type StockAdjNotification,
-  type StockAdjNotificationResponse,
-  getStockAdjNotifications,
-  getStockAdjRevisiNotifications,
-  getPendingStockAdjNotifications,
-  getStockAdjCombinedSenderNotifications,
-  markStockAdjNotificationAsRead,
-  approveStockAdj,
-  reviseStockAdj,
-  rejectStockAdj,
-} from "./stock_adjustment/service.stock_adj";
-
-// Re-export from Transfer Gudang service
-export {
-  type TransferGudangNotification,
-  type TransferGudangNotificationResponse,
-  getTransferGudangNotifications,
-  getTransferGudangRevisiNotifications,
-  getPendingTransferGudangNotifications,
-  getTransferGudangCombinedSenderNotifications,
-  markTransferGudangNotificationAsRead,
-  approveTransferGudangNotification,
-  reviseTransferGudangNotification,
-  rejectTransferGudangNotification,
-} from "./transfer_gudang/service.transfer_gudang";
-
-// Re-export from Purchase Request Subcon service
-export {
-  type PurchaseRequestSubconNotification,
-  type PurchaseRequestSubconNotificationResponse,
-  getPurchaseRequestSubconNotifications,
-  markPurchaseRequestSubconNotificationAsRead,
-  approvePurchaseRequestSubcon,
-  revisePurchaseRequestSubcon,
-  rejectPurchaseRequestSubcon,
-} from "./purchase_request_subcon/service.purchase_request_subcon";
-
-// Re-export from Purchase Order Subcon service
-export {
-  type PurchaseOrderSubconNotification,
-  type PurchaseOrderSubconNotificationResponse,
-  getPurchaseOrderSubconNotifications,
-  markPurchaseOrderSubconNotificationAsRead,
-  approvePurchaseOrderSubcon,
-  revisePurchaseOrderSubcon,
-  rejectPurchaseOrderSubcon,
-} from "./service.purchase_order_subcon";
-
-// Re-export from Purchase Invoice Subcon service
-export {
-  type PurchaseInvoiceSubconNotification,
-  type PurchaseInvoiceSubconNotificationResponse,
-  getPurchaseInvoiceSubconNotifications,
-  markPurchaseInvoiceSubconNotificationAsRead,
-  approvePurchaseInvoiceSubcon,
-  revisePurchaseInvoiceSubcon,
-  rejectPurchaseInvoiceSubcon,
-} from "./purchase_invoice_subcon/service.purchase_invoice_subcon";
-
-// Re-export from Purchase Return Subcon service
-export {
-  type PurchaseReturnSubconNotification,
-  type PurchaseReturnSubconNotificationResponse,
-  getPurchaseReturnSubconNotifications,
-  markPurchaseReturnSubconNotificationAsRead,
-  approvePurchaseReturnSubcon,
-  revisePurchaseReturnSubcon,
-  rejectPurchaseReturnSubcon,
-} from "./service.purchase_return_subcon";
-
 import { apiCall } from "@/lib/api";
-import {
-  getItemsNotifications,
-  getRevisiNotifications as getItemRevisiNotificationsInternal,
-  type ItemNotification,
-} from "./item/service.item";
-import {
-  getTPurchaseOrderCloseNotifications,
-  getPendingTPurchaseOrderCloseNotifications,
-  getTPurchaseOrderCloseRevisiNotifications,
-  getTPurchaseOrderCloseCombinedSenderNotifications,
-  type TPurchaseOrderCloseNotification,
-} from "./purchase_order_close/service.purchase_order_close";
-import {
-  getPurchaseRequestNotifications,
-  getPRRevisiNotifications,
-  getPRPendingApprovalNotifications,
-  getPRCombinedSenderNotifications,
-  type PRNotification,
-} from "./pr/service.pr";
-import {
-  getPurchaseOrderNotifications,
-  getPORevisiNotifications,
-  getPOPendingApprovalNotifications,
-  getPOCombinedSenderNotifications,
-  type PONotification,
-} from "./po/service.po";
-import {
-  getPurchaseInvoiceNotifications,
-  getPIRevisiNotifications,
-  getPIPendingApprovalNotifications,
-  type PINotification,
-} from "./pi/service.pi";
-import {
-  getTPurchaseRequestCloseNotifications,
-  getTPurchaseRequestCloseRevisiNotifications,
-  getPendingTPurchaseRequestCloseNotifications,
-  type TPurchaseRequestCloseNotification,
-} from "./purchase_request_close/service.purchase_request_close";
-import {
-  getPurchaseReturnNotifications,
-  getPurchaseReturnRevisiNotifications,
-  getPurchaseReturnPendingApprovalNotifications,
-  type PurchaseReturnNotification,
-} from "./purchase_retrun/service.preturn";
-import {
-  getPenerimaanGudangNotifications,
-  getPenerimaanGudangRevisiNotifications,
-  getPenerimaanGudangPendingApprovalNotifications,
-  type PenerimaanGudangNotification,
-} from "./t_penerimaan_gudang/service.penerimaan_gudang";
-import {
-  getSupplierNotifications,
-  getSupplierRevisiNotifications,
-  getSupplierPendingApprovalNotifications,
-  type SupplierNotification,
-} from "./supplier/service.supplier";
-import {
-  getStockOpnameNotifications,
-  getStockOpnameRevisiNotifications,
-  getPendingStockOpnameNotifications,
-  type StockOpnameNotification,
-} from "./stock_opname/service.stock_opname";
-import {
-  getStockAdjNotifications,
-  getStockAdjRevisiNotifications,
-  getPendingStockAdjNotifications,
-  type StockAdjNotification,
-} from "./stock_adjustment/service.stock_adj";
-import {
-  getTransferGudangNotifications,
-  getTransferGudangRevisiNotifications,
-  getPendingTransferGudangNotifications,
-  type TransferGudangNotification,
-} from "./transfer_gudang/service.transfer_gudang";
-import { type PurchaseRequestSubconNotification } from "./purchase_request_subcon/service.purchase_request_subcon";
-import { type IoNotification } from "./service.io";
-import { type PurchaseOrderSubconNotification } from "./service.purchase_order_subcon";
-import { type PurchaseInvoiceSubconNotification } from "./purchase_invoice_subcon/service.purchase_invoice_subcon";
-import { type PurchaseReturnSubconNotification } from "./service.purchase_return_subcon";
+import { type ItemNotification } from "./item/service.item";
+import { type PRNotification } from "./pr/service.pr";
+import { type PONotification } from "./po/service.po";
+import { type PINotification } from "./pi/service.pi";
+import { type PurchaseReturnNotification } from "./purchase_retrun/service.preturn";
+import { type PenerimaanGudangNotification } from "./t_penerimaan_gudang/service.penerimaan_gudang";
+import { type SupplierNotification } from "./supplier/service.supplier";
+import { type StockOpnameNotification } from "./stock_opname/service.stock_opname";
 
 // ============================================================================
 // COMBINED TYPES
@@ -285,32 +128,22 @@ import { type PurchaseReturnSubconNotification } from "./service.purchase_return
 export type NotificationItem = (
   | ItemNotification
   | PRNotification
-  | TransferGudangNotification
-  | PurchaseRequestSubconNotification
-  | PurchaseOrderSubconNotification
-  | PurchaseInvoiceSubconNotification
-  | PurchaseReturnSubconNotification
-  | IoNotification
+  | PONotification
+  | PINotification
+  | PurchaseReturnNotification
+  | PenerimaanGudangNotification
+  | SupplierNotification
+  | StockOpnameNotification
 ) & {
   notification_type?:
     | "items"
     | "purchase_request"
     | "purchase_order"
     | "purchase_invoice"
-    | "purchase_request_close"
-    | "purchase_order_close"
     | "purchase_return"
-    | "io"
     | "penerimaan_gudang"
     | "supplier"
-    | "stock_opname"
-    | "stock_adj"
-    | "transfer_gudang"
-    | "transform_item"
-    | "purchase_request_subcon"
-    | "purchase_order_subcon"
-    | "purchase_invoice_subcon"
-    | "purchase_return_subcon";
+    | "stock_opname";
   notification_category?: "approval" | "outstanding" | "info";
   info_type?: "revisi" | "pending_approval" | "stock_opname_lock" | string;
   outstanding_type?: "purchase_request" | "purchase_order" | string;
@@ -326,17 +159,16 @@ export type NotificationItem = (
   // For compatibility - include both m_item and t_purchase_request
   m_items_id?: string;
   t_purchase_request_id?: string;
-  t_purchase_request_subcon_id?: string;
-  t_purchase_order_subcon_id?: string;
-  t_purchase_invoice_subcon_id?: string;
-  t_purchase_return_subcon_id?: string;
-  t_transfer_gudang_id?: string;
+  t_purchase_order_id?: string;
+  t_purchase_invoice_id?: string;
+  t_purchase_return_id?: string;
+  t_penerimaan_gudang_id?: string;
+  t_stock_opname_id?: string;
+  m_supplier_id?: string;
+  t_stock_adj_id?: string;
   m_item?: ItemNotification["m_item"];
   t_purchase_request?: PRNotification["t_purchase_request"];
-  t_purchase_request_subcon?: PurchaseRequestSubconNotification["t_purchase_request_subcon"];
-  t_purchase_order_subcon?: PurchaseOrderSubconNotification["t_purchase_order_subcon"];
-  t_purchase_invoice_subcon?: PurchaseInvoiceSubconNotification["t_purchase_invoice_subcon"];
-  t_transfer_gudang?: TransferGudangNotification["t_transfer_gudang"];
+  user_default?: { id?: string; name?: string } | null;
 };
 
 export interface NotificationResponse {
@@ -416,18 +248,7 @@ function normalizeUnifiedRows(items: any[]): NotificationItem[] {
   return (items || [])
     .map((item: any) => ({
       ...item,
-      notification_type:
-        item.notification_type ||
-        (item.t_purchase_order_subcon_id || item.t_purchase_order_subcon
-          ? "purchase_order_subcon"
-          : item.t_purchase_invoice_subcon_id || item.t_purchase_invoice_subcon
-            ? "purchase_invoice_subcon"
-            : item.t_purchase_return_subcon_id || item.t_purchase_return_subcon
-              ? "purchase_return_subcon"
-              : item.t_purchase_request_subcon_id ||
-                  item.t_purchase_request_subcon
-                ? "purchase_request_subcon"
-                : "purchase_request"),
+      notification_type: item.notification_type || "purchase_request",
     }))
     .sort(
       (a, b) =>
@@ -435,7 +256,6 @@ function normalizeUnifiedRows(items: any[]): NotificationItem[] {
         new Date(a.createdAt || a.updatedAt || 0).getTime(),
     ) as NotificationItem[];
 }
-
 
 export async function getUnifiedNotifications(
   page = 1,
@@ -664,31 +484,3 @@ export async function getPendingApprovalNotifications(
     },
   };
 }
-
-// Re-export from IO service
-export {
-  type IoNotification,
-  type IoNotificationResponse,
-  getIoNotifications,
-  getIoRevisiNotifications,
-  getPendingIoNotifications,
-  getIoCombinedSenderNotifications,
-  markIoNotificationAsRead,
-  approveIo,
-  reviseIo,
-  rejectIo,
-} from "./service.io";
-
-// Re-export from WO service
-export {
-  type WoNotification,
-  type WoNotificationResponse,
-  getWoNotifications,
-  getWoRevisiNotifications,
-  getPendingWoNotifications,
-  getWoCombinedSenderNotifications,
-  markWoNotificationAsRead,
-  approveWo,
-  reviseWo,
-  rejectWo,
-} from "./wo/service.wo";

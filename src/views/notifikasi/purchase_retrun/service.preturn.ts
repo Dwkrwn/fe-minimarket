@@ -219,7 +219,7 @@ function getApprovalByPath(
 }
 
 // Purchase Return path constant
-const PR_PATH = "/purchasing/transaksi/t_purchase_return";
+const PR_PATH = "/purchasing/receiving/purchase-returns";
 
 // ============================================================================
 // API FUNCTIONS

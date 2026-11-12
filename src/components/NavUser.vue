@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { LogOut } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { API_BASE_URL } from "@/lib/api";
 import { toast } from "vue-sonner";
@@ -94,8 +95,7 @@ const userInitials = computed(() => {
 });
 
 const logoutDialogDescription = computed(() => {
-  const userName = authStore.user?.name || "User";
-  return `Apakah Anda yakin ingin logout? Anda akan dikembalikan ke halaman login.`;
+  return `Anda akan keluar dari akun ini dan kembali ke halaman masuk.`;
 });
 
 const showLogoutDialog = () => {
@@ -111,13 +111,13 @@ const handleLogout = async () => {
     // Simulate some processing time
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    toast.success("Logout Berhasil", {
-      description: `Sampai jumpa, ${userName}!`,
+    toast.success("Berhasil keluar", {
+      description: `Sampai jumpa, ${userName}.`,
     });
     router.push("/login");
   } catch (error) {
-    toast.error("Logout Gagal", {
-      description: "Terjadi kesalahan saat logout",
+    toast.error("Gagal keluar", {
+      description: "Terjadi kesalahan saat keluar. Silakan coba lagi.",
     });
   } finally {
     isLoggingOut.value = false;
@@ -133,30 +133,30 @@ const handleLogout = async () => {
         <DropdownMenuTrigger as-child>
           <SidebarMenuButton
             size="lg"
-            class="h-auto p-2 rounded-2xl !bg-slate-50 !border-slate-200/90 hover:!bg-slate-100 hover:!border-slate-300 transition-all duration-200 group-data-[collapsible=icon]:p-1.5 shadow-xs !text-slate-800"
+            class="h-auto rounded-lg p-2 transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:p-1.5"
           >
-            <Avatar class="h-8.5 w-8.5 rounded-xl border border-slate-200 bg-white shrink-0">
+            <Avatar class="h-9 w-9 shrink-0 rounded-lg border border-sidebar-border bg-card">
               <AvatarImage
                 :src="selectedCompany.logo"
                 :alt="selectedCompany.name"
               />
-              <AvatarFallback class="rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
+              <AvatarFallback class="rounded-lg bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
                 {{ userInitials }}
               </AvatarFallback>
             </Avatar>
-            <div class="grid flex-1 text-left text-sm leading-tight ml-2 group-data-[collapsible=icon]:hidden">
-              <span class="truncate font-bold text-slate-900 text-sm tracking-tight">{{ displayName }}</span>
-              <span class="truncate text-xs text-slate-500 font-medium">{{
+            <div class="ml-2 grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+              <span class="truncate text-sm font-semibold text-sidebar-foreground">{{ displayName }}</span>
+              <span class="truncate text-xs text-muted-foreground">{{
                 selectedCompany.nameRespo || "Mini Market"
               }}</span>
             </div>
             <ChevronsUpDown
-              class="ml-auto size-4 text-slate-400 group-hover:text-slate-700 transition-colors group-data-[collapsible=icon]:hidden shrink-0"
+              class="ml-auto size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
             />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          class="w-[--reka-dropdown-menu-trigger-width] min-w-56 rounded-2xl p-1.5 shadow-xl border border-border/80"
+          class="min-w-56 rounded-lg p-1.5 shadow-lg"
           :side="isMobile ? 'bottom' : 'right'"
           align="end"
           :side-offset="6"
@@ -182,11 +182,11 @@ const handleLogout = async () => {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            class="cursor-pointer text-sm text-destructive focus:bg-destructive/10 focus:text-destructive"
             @click="showLogoutDialog"
-            class="hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-colors"
           >
-            <LogOut class="opacity-60" />
-            Log out
+            <LogOut class="opacity-70" />
+            Keluar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -196,10 +196,10 @@ const handleLogout = async () => {
   <!-- Logout Confirmation Dialog -->
   <GlobalDialog
     :open="isLogoutDialogOpen"
-    title="Logout"
+    title="Keluar dari aplikasi"
     :description="logoutDialogDescription"
     type="warning"
-    confirm-text="Logout"
+    confirm-text="Keluar"
     cancel-text="Batal"
     :is-loading="isLoggingOut"
     :logo-src="selectedCompany.logo"

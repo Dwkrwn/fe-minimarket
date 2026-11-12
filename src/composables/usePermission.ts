@@ -26,8 +26,7 @@ interface CachedMenu {
  * This allows child routes to inherit permissions from parent menus
  */
 const CHILD_ROUTE_MAPPING: Record<string, string> = {
-  '/setup/m_format_nomor': '/setup/m_prefix',
-  // Add more child route mappings here as needed
+  // Add child route mappings here as needed
 }
 
 /**

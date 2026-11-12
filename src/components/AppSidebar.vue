@@ -9,12 +9,7 @@ import TeamSwitcher from "@/components/TeamSwitcher.vue";
 import VoiceMenuSearch from "@/components/VoiceMenuSearch.vue";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  getMenuListNoPagination,
-  type MenuItem,
-} from "@/views/setup/menu/service";
+import { type MenuItem } from "@/views/setup/menu/service";
 import { getUnifiedNotifications } from "@/views/notifikasi/service";
 import { toast } from "vue-sonner";
 import { useSidebarRefresh } from "@/composables/useSidebarRefresh";
@@ -25,9 +20,6 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -67,6 +59,45 @@ const loadReadNotifications = () => {
 // Auto-refresh composable
 const { refreshTrigger, resetRefresh } = useSidebarRefresh();
 
+/** Nama modul dalam bahasa yang mudah dipahami */
+const MODULE_LABELS: Record<string, string> = {
+  SETUP: "Pengaturan",
+  PURCHASING: "Pembelian",
+  INVENTORY: "Persediaan",
+  MARKETING: "Pemasaran",
+  SALES: "Penjualan",
+  FINANCE: "Keuangan",
+  HR: "Karyawan",
+  LOGISTICS: "Logistik",
+  PRODUCTION: "Produksi",
+  DEV: "Pengembangan",
+  OTHER: "Lainnya",
+};
+
+/** Nama kelompok menu dalam bahasa yang mudah dipahami */
+const SUB_MODULE_LABELS: Record<string, string> = {
+  MASTER: "Data Induk",
+  PEMESANAN: "Pemesanan",
+  PENERIMAAN: "Penerimaan Barang",
+  TAGIHAN: "Tagihan",
+  LAPORAN: "Laporan",
+};
+
+function toSentenceCase(value: string): string {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const lower = text.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function moduleLabel(name: string): string {
+  return MODULE_LABELS[String(name || "").toUpperCase()] || toSentenceCase(name);
+}
+
+function subModuleLabel(name: string): string {
+  return SUB_MODULE_LABELS[String(name || "").toUpperCase()] || toSentenceCase(name);
+}
+
 /** Get appropriate icon for each module */
 const getModuleIcon = (moduleName: string): string => {
   const iconMap: Record<string, string> = {
@@ -80,6 +111,17 @@ const getModuleIcon = (moduleName: string): string => {
     FINANCE: "DollarSign",
     HR: "Users",
     LOGISTICS: "Truck",
+    PENGATURAN: "Settings",
+    PEMBELIAN: "ShoppingCart",
+    PERSEDIAAN: "Package",
+    PEMASARAN: "Megaphone",
+    PENJUALAN: "TrendingUp",
+    KEUANGAN: "DollarSign",
+    KARYAWAN: "Users",
+    LOGISTIK: "Truck",
+    PRODUKSI: "Factory",
+    PENGEMBANGAN: "Code2",
+    LAINNYA: "Box",
   };
 
   return iconMap[moduleName.toUpperCase()] || "Box";
@@ -299,7 +341,6 @@ const handleSearchFocus = () => {
 
 // Helper function to check if a menu item should be active
 // Checks both direct path match and route meta.parentMenu for related routes
-// Also supports child routes (e.g., /setup/m_format_nomor is child of /setup/m_prefix)
 const isMenuItemActive = (itemPath: string, itemName?: string): boolean => {
   const pathMatch =
     route.path === itemPath || route.path.startsWith(itemPath + "/");
@@ -309,34 +350,27 @@ const isMenuItemActive = (itemPath: string, itemName?: string): boolean => {
   const parentMatch =
     !!itemName && parentMenuMeta.toLowerCase() === itemName.toLowerCase();
 
-  // Special handling: check if current route is /setup/m_format_nomor and item is /setup/m_prefix
-  // This handles related routes under same module
-  const relatedRouteMatch =
-    (route.path === "/setup/m_format_nomor" ||
-      route.path.startsWith("/setup/m_format_nomor/")) &&
-    itemPath === "/setup/m_prefix";
-
-  return pathMatch || parentMatch || relatedRouteMatch;
+  return pathMatch || parentMatch;
 };
 
 // Static menu items (always visible)
 const staticMenuItems = [
   {
-    title: "NOTIFIKASI",
+    title: "Notifikasi",
     url: "/notifikasi",
     icon: "Bell",
     modul: null,
     superAdminOnly: false,
   },
   {
-    title: "DASHBOARD",
+    title: "Dasbor",
     url: "/",
     icon: "LayoutDashboard",
     modul: null,
     superAdminOnly: false,
   },
   {
-    title: "MENU",
+    title: "Menu",
     url: "/setup/menu",
     icon: "List",
     modul: "SETUP",
@@ -405,7 +439,7 @@ const buildMenuStructure = computed(() => {
       } else {
         // Has sub-modul, create nested structure
         setupItems.push({
-          title: subModul,
+          title: subModuleLabel(subModul),
           url: "#",
           icon: "Folder",
           isActive: items.some((i) => isMenuItemActive(i.path, i.name)),
@@ -422,7 +456,7 @@ const buildMenuStructure = computed(() => {
     // Only add SETUP module if it has items to show
     if (setupItems.length > 0) {
       result.push({
-        title: "SETUP",
+        title: moduleLabel("SETUP"),
         url: "#",
         icon: getModuleIcon("SETUP"),
         isActive: route.path.startsWith("/setup"),
@@ -464,7 +498,7 @@ const buildMenuStructure = computed(() => {
       } else {
         // Has sub-modul
         moduleItems.push({
-          title: subModul,
+          title: subModuleLabel(subModul),
           url: "#",
           icon: "Folder",
           isActive: items.some((i) => isMenuItemActive(i.path, i.name)),
@@ -479,7 +513,7 @@ const buildMenuStructure = computed(() => {
     });
 
     result.push({
-      title: modulName,
+      title: moduleLabel(modulName),
       url: "#",
       icon: getModuleIcon(modulName),
       isActive: moduleItems.some(
@@ -521,7 +555,9 @@ const allMenuItems = computed(() => {
       title: menu.name,
       url: menu.path,
       icon: menu.icon?.trim() || "FileText",
-      parent: menu.sub_modul ? `${menu.modul} > ${menu.sub_modul}` : menu.modul,
+      parent: menu.sub_modul
+        ? `${moduleLabel(menu.modul)} > ${subModuleLabel(menu.sub_modul)}`
+        : moduleLabel(menu.modul),
     });
   });
 
@@ -535,7 +571,7 @@ const allMenuItems = computed(() => {
           title: s.title,
           url: s.url,
           icon: s.icon,
-          parent: "SETUP",
+          parent: moduleLabel("SETUP"),
         });
       });
   }
@@ -577,84 +613,29 @@ const data = computed(() => {
     ],
 
     navMain: searchQuery.value.trim()
-      ? (() => {
-          // Group filtered items by their parent (Module > SubModule)
-          const grouped: Record<string, any[]> = {};
-
-          // Only include items that match the search query
-          const query = searchQuery.value.toLowerCase();
-          const matchedItems = filteredMenuItems.value.filter((item: any) =>
-            item.title.toLowerCase().includes(query),
-          );
-
-          matchedItems.forEach((item: any) => {
-            const parentKey = item.parent || "OTHER";
-            if (!grouped[parentKey]) {
-              grouped[parentKey] = [];
-            }
-            grouped[parentKey].push({
-              title: item.title,
-              url: item.url,
-              icon: item.icon,
-              isActive:
-                route.path === item.url ||
-                route.path.startsWith(item.url + "/"),
-              badge:
-                item.url === "/notifikasi" && notificationCount.value > 0
-                  ? notificationCount.value
-                  : undefined,
-            });
-          });
-
-          // Convert grouped to menu structure - merge same modules
-          const moduleMap: Record<string, any> = {};
-
-          Object.entries(grouped).forEach(([parent, items]) => {
-            const parts = parent.split(" > ");
-            const moduleName = parts[0] || "OTHER";
-            const subModuleName = parts[1];
-
-            if (!moduleMap[moduleName]) {
-              moduleMap[moduleName] = {
-                title: moduleName,
-                icon: getModuleIcon(moduleName),
-                isActive: false,
-                items: [],
-              };
-            }
-
-            if (subModuleName) {
-              // Check if submodule already exists
-              let subModule = moduleMap[moduleName].items.find(
-                (s: any) => s.title === subModuleName,
-              );
-              if (!subModule) {
-                subModule = {
-                  title: subModuleName,
-                  icon: "FolderOpen",
-                  isActive: false,
-                  items: [],
-                };
-                moduleMap[moduleName].items.push(subModule);
-              }
-              subModule.items.push(...items);
-              subModule.isActive = subModule.items.some((i: any) => i.isActive);
-            } else {
-              // Direct children of module
-              moduleMap[moduleName].items.push(...items);
-            }
-
-            moduleMap[moduleName].isActive = moduleMap[moduleName].items.some(
-              (i: any) => i.isActive,
-            );
-          });
-
-          return Object.values(moduleMap);
-        })()
+      ? filteredMenuItems.value
+          .filter((item: any) =>
+            String(item.title || "")
+              .toLowerCase()
+              .includes(searchQuery.value.trim().toLowerCase()),
+          )
+          .filter((item: any) => item.url)
+          .map((item: any) => ({
+            title: item.title,
+            url: item.url,
+            icon: item.icon,
+            isActive:
+              route.path === item.url ||
+              route.path.startsWith(item.url + "/"),
+            badge:
+              item.url === "/notifikasi" && notificationCount.value > 0
+                ? notificationCount.value
+                : undefined,
+          }))
       : [
           // Static items first
           {
-            title: "NOTIFIKASI",
+            title: "Notifikasi",
             url: "/notifikasi",
             icon: "Bell",
             isActive: route.path === "/notifikasi",
@@ -662,7 +643,7 @@ const data = computed(() => {
               notificationCount.value > 0 ? notificationCount.value : undefined,
           },
           {
-            title: "DASHBOARD",
+            title: "Dasbor",
             url: "/",
             icon: "LayoutDashboard",
             isActive: route.path === "/",
@@ -699,23 +680,17 @@ const data = computed(() => {
       />
     </SidebarHeader>
 
-    <SidebarContent
-      class="space-y-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800"
-    >
-      <div class="px-3 py-2 group-data-[collapsible=icon]:px-2">
+    <SidebarContent class="gap-1">
+      <div class="px-3 py-3 group-data-[collapsible=icon]:px-2">
         <div class="relative flex items-center gap-2">
           <div class="relative flex-1">
             <Search
-              class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-data-[collapsible=icon]:left-2 pointer-events-none"
+              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-data-[collapsible=icon]:left-2"
             />
             <Input
               v-model="searchQuery"
-              :placeholder="
-                sidebar.state.value === 'collapsed'
-                  ? 'Click to search...'
-                  : 'Search menu...'
-              "
-              class="pl-9 pr-9 h-9.5 rounded-xl !bg-slate-50 !border-slate-200 !text-slate-800 placeholder:!text-slate-400 focus:!bg-white focus:!border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-xs group-data-[collapsible=icon]:pl-8 group-data-[collapsible=icon]:pr-8 group-data-[collapsible=icon]:cursor-pointer transition-all duration-200 text-xs"
+              placeholder="Cari menu..."
+              class="h-10 rounded-lg border-input bg-card pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground group-data-[collapsible=icon]:cursor-pointer group-data-[collapsible=icon]:pl-8 group-data-[collapsible=icon]:pr-8"
               @focus="handleSearchFocus"
               @click="handleSearchFocus"
               :readonly="sidebar.state.value === 'collapsed'"
@@ -723,8 +698,8 @@ const data = computed(() => {
             <button
               v-if="searchQuery"
               type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 group-data-[collapsible=icon]:right-2"
-              aria-label="Clear search"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground group-data-[collapsible=icon]:right-2"
+              aria-label="Hapus pencarian"
               @mousedown.prevent
               @click="searchQuery = ''"
             >
@@ -732,41 +707,31 @@ const data = computed(() => {
             </button>
           </div>
 
-          <!-- Voice Menu Search Button -->
+          <!-- Pencarian suara -->
           <div class="group-data-[collapsible=icon]:hidden">
             <VoiceMenuSearch @update:transcript="searchQuery = $event" />
           </div>
         </div>
 
-        <!-- Refresh Button -->
-        <Button
-          variant="outline"
-          size="sm"
-          class="w-full justify-center gap-2 h-9 rounded-xl text-xs font-semibold !text-slate-700 !border-slate-200 !bg-slate-50 hover:!bg-slate-100 hover:!text-slate-900 transition-all mt-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 shadow-xs"
-          @click="handleRefreshMenu"
+        <!-- Muat ulang menu -->
+        <button
+          type="button"
+          class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground group-data-[collapsible=icon]:px-2"
           :disabled="refreshing || loading"
+          title="Muat ulang daftar menu"
+          @click="handleRefreshMenu"
         >
-          <component
-            :is="refreshing ? 'Loader2' : 'RefreshCw'"
-            :class="['h-4 w-4', refreshing ? 'animate-spin' : '']"
-          />
+          <RefreshCw :class="['h-4 w-4', refreshing ? 'animate-spin' : '']" />
           <span class="group-data-[collapsible=icon]:hidden">
-            {{ refreshing ? "Memperbarui..." : "Refresh Menu" }}
+            {{ refreshing ? "Memuat ulang..." : "Muat ulang menu" }}
           </span>
-        </Button>
+        </button>
 
         <div
           v-if="searchQuery.trim()"
-          class="mt-2 px-1 group-data-[collapsible=icon]:hidden"
+          class="mt-2 px-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
         >
-          <div
-            class="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200"
-          >
-            {{ filteredMenuItems.length }} result{{
-              filteredMenuItems.length !== 1 ? "s" : ""
-            }}
-            found
-          </div>
+          {{ filteredMenuItems.length }} menu ditemukan
         </div>
       </div>
 
@@ -774,10 +739,10 @@ const data = computed(() => {
       <div v-if="loading" class="px-3 space-y-2">
         <div class="space-y-1">
           <Skeleton class="h-4 w-16 mb-2" />
-          <Skeleton class="h-9 w-full" />
-          <Skeleton class="h-9 w-full" />
-          <Skeleton class="h-9 w-full" />
-          <Skeleton class="h-9 w-full" />
+          <Skeleton class="h-10 w-full" />
+          <Skeleton class="h-10 w-full" />
+          <Skeleton class="h-10 w-full" />
+          <Skeleton class="h-10 w-full" />
         </div>
       </div>
 
@@ -786,7 +751,7 @@ const data = computed(() => {
     </SidebarContent>
 
     <SidebarFooter
-      class="gap-2 pb-2 !bg-white !text-slate-800 dark:!bg-white dark:!text-slate-800 border-t border-slate-100"
+      class="gap-2 border-t border-sidebar-border bg-sidebar pb-2"
     >
       <div v-if="loading" class="px-3 py-2">
         <div class="flex items-center gap-2">

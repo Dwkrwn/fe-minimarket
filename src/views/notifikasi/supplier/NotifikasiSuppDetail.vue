@@ -48,7 +48,7 @@ import {
   rejectSupplier,
   type SupplierNotification,
 } from "./service.supplier";
-import { getSupplierById } from "@/views/purchasing/master/m_supplier/service";
+import { getSupplierDetail } from "@/views/purchasing/master/suppliers/supplierService";
 import { useAuthStore } from "@/stores/auth";
 import FieldX from "@/components/field/FieldX.vue";
 
@@ -99,8 +99,8 @@ const fetchNotificationDetail = async () => {
     // Re-fetch full Supplier detail
     if (found.m_supplier_id) {
       try {
-        const supplierResponse = await getSupplierById(found.m_supplier_id);
-        hydratedNotification.m_supplier = supplierResponse.data;
+        const supplier = await getSupplierDetail(found.m_supplier_id);
+        hydratedNotification.m_supplier = supplier;
       } catch (error) {
         console.error("Error fetching supplier detail:", error);
       }
@@ -136,7 +136,7 @@ const handleApproval = async (status: "APPROVED" | "REVISI") => {
     const approvalList = authStore.getApprovalList();
     const supplierApproval = approvalList.find(
       (a: any) =>
-        a.path === "/purchasing/master/m_supplier" &&
+        a.path === "/purchasing/master/suppliers" &&
         a.tipe_approve?.toUpperCase() === "MENYETUJUI",
     );
 
@@ -197,7 +197,7 @@ const handleReject = async () => {
     const approvalList = authStore.getApprovalList();
     const supplierApproval = approvalList.find(
       (a: any) =>
-        a.path === "/purchasing/master/m_supplier" &&
+        a.path === "/purchasing/master/suppliers" &&
         a.tipe_approve?.toUpperCase() === "MENYETUJUI",
     );
 

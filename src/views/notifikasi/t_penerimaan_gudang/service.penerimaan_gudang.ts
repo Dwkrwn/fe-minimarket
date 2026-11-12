@@ -196,9 +196,6 @@ function getApprovalByPath(path: string): { id: string; sender_id: string; level
   return null
 }
 
-// Penerimaan Gudang path constant
-const PG_PATH = '/inventory/transaksi/t_penerimaan_gudang'
-
 // ============================================================================
 // API FUNCTIONS
 // ============================================================================

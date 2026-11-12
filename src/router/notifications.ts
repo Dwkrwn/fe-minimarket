@@ -3,6 +3,11 @@ import { generateNotificationRoutes } from "./helpers";
 
 /**
  * Notification routes
+ *
+ * Detail route hanya untuk modul yang masih ada di frontend minimarket:
+ * item, purchase request, purchase order, purchase invoice, purchase return,
+ * penerimaan gudang, dan supplier. Notifikasi stock opname diarahkan langsung ke
+ * halaman Hitung Fisik (/inventory/opname/fisik/:id).
  */
 export const notificationRoutes: RouteRecordRaw[] = [
   {
@@ -28,24 +33,6 @@ export const notificationRoutes: RouteRecordRaw[] = [
       title: "Notifikasi Purchase Request",
     },
     {
-      path: "stock_opname",
-      name: "NotifikasiStockOpnameDetail",
-      component: "stock_opname/NotifikasiStockOpnameDetail.vue",
-      title: "Notifikasi StockOpname",
-    },
-    {
-      path: "stock_adj",
-      name: "NotifikasiStockAdjDetail",
-      component: "stock_adjustment/NotifikasiStockAdjDetail.vue",
-      title: "Notifikasi StockAdj",
-    },
-    {
-      path: "transfer_gudang",
-      name: "NotifikasiTransferGudangDetail",
-      component: "transfer_gudang/NotifikasiTransferGudangDetail.vue",
-      title: "Notifikasi Transfer Gudang",
-    },
-    {
       path: "purchase-order",
       name: "NotifikasiPODetail",
       component: "po/NotifikasiPODetail.vue",
@@ -56,19 +43,6 @@ export const notificationRoutes: RouteRecordRaw[] = [
       name: "NotifikasiPIDetail",
       component: "pi/NotifikasiPIDetail.vue",
       title: "Notifikasi Purchase Invoice",
-    },
-    {
-      path: "purchase_order_close",
-      name: "NotifikasiTPurchaseOrderCloseDetail",
-      component: "purchase_order_close/NotifikasiTPurchaseOrderCloseDetail.vue",
-      title: "Notifikasi TPurchaseOrderClose",
-    },
-    {
-      path: "purchase_request_close",
-      name: "NotifikasiTPurchaseRequestCloseDetail",
-      component:
-        "purchase_request_close/NotifikasiTPurchaseRequestCloseDetail.vue",
-      title: "Notifikasi Purchase Request Close",
     },
     {
       path: "purchase-return",
@@ -88,93 +62,5 @@ export const notificationRoutes: RouteRecordRaw[] = [
       component: "supplier/NotifikasiSuppDetail.vue",
       title: "Notifikasi Supplier",
     },
-    {
-      path: "transform_item",
-      name: "NotifikasiTransformItemDetail",
-      component: "NotifikasiTransformItemDetail.vue",
-      title: "Notifikasi Transform Item",
-    },
-    {
-      path: "internal_order",
-      name: "NotifikasiIoDetail",
-      component: "NotifikasiIoDetail.vue",
-      title: "Notifikasi Internal Order",
-    },
-    {
-      path: "purchase_request_subcon",
-      name: "NotifikasiPurchaseRequestSubconDetail",
-      component:
-        "purchase_request_subcon/NotifikasiPurchaseRequestSubconDetail.vue",
-      title: "Notifikasi Purchase Request Subcon",
-    },
-    {
-      path: "purchase_order_subcon",
-      name: "NotifikasiPurchaseOrderSubconDetail",
-      component:
-        "purchase_order_subcon/NotifikasiPurchaseOrderSubconDetail.vue",
-      title: "Notifikasi Purchase Order Subcon",
-    },
-    {
-      path: "purchase_invoice_subcon",
-      name: "NotifikasiPISubconDetail",
-      component: "purchase_invoice_subcon/NotifikasiPISubconDetail.vue",
-      title: "Notifikasi Purchase Invoice Subcon",
-    },
-    {
-      path: "purchase_return_subcon",
-      name: "NotifikasiPurchaseReturnSubconDetail",
-      component: "NotifikasiPurchaseReturnSubconDetail.vue",
-      title: "Notifikasi Purchase Return Subcon",
-    },
-    {
-      path: "m_customer",
-      name: "NotifikasiCustomerDetail",
-      component: "m_customer/NotifikasiCustomerDetail.vue",
-      title: "Notifikasi Customer",
-    },
-    {
-      path: "m_customer_change",
-      name: "NotifikasiCustomerChangeDetail",
-      component: "m_customer_change/NotifikasiCustomerChangeDetail.vue",
-      title: "Notifikasi Perubahan Customer",
-    },
-    {
-      path: "work_order",
-      name: "NotifikasiWoDetail",
-      component: "wo/NotifikasiWoDetail.vue",
-      title: "Notifikasi Work Order",
-    },
-    {
-      path: "work_order_wip",
-      name: "NotifikasiWoWipDetail",
-      component: "NotifikasiWoWipDetail.vue",
-      title: "Notifikasi Work Order WIP",
-    },
-    {
-      path: "precost",
-      name: "NotifikasiPrecostDetail",
-      component: "precost/NotifikasiPrecostDetail.vue",
-      title: "Notifikasi Precost",
-    },
-    {
-      path: "material_transfer",
-      name: "NotifikasiMtfDetail",
-      component: "NotifikasiMtfDetail.vue",
-      title: "Notifikasi Material Transfer",
-    },
-    {
-      path: "material_request",
-      name: "NotifikasiMrqDetail",
-      component: "NotifikasiMrqDetail.vue",
-      title: "Notifikasi Material Request",
-    },
-    {
-      path: "result_confirmation",
-      name: "NotifikasiRcDetail",
-      component: "NotifikasiRcDetail.vue",
-      title: "Notifikasi Result Confirmation",
-    },
   ]),
 ];
-
-

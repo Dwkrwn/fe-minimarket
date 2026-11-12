@@ -188,7 +188,7 @@ export async function approveStockOpname(
   approval_level: number,
   approval_catatan: string,
 ): Promise<any> {
-  const approvalData = getApprovalByPath("/inventory/transaksi/t_stock_opname");
+  const approvalData = getApprovalByPath("/inventory/opname/fisik");
   if (!approvalData) {
     throw new Error("Approval data not found");
   }
@@ -218,7 +218,7 @@ export async function reviseStockOpname(
   approval_level: number,
   approval_catatan: string,
 ): Promise<any> {
-  const approvalData = getApprovalByPath("/inventory/transaksi/t_stock_opname");
+  const approvalData = getApprovalByPath("/inventory/opname/fisik");
   if (!approvalData) {
     throw new Error("Approval data not found");
   }
@@ -248,7 +248,7 @@ export async function rejectStockOpname(
   approval_level: number,
   approval_catatan: string,
 ): Promise<any> {
-  const approvalData = getApprovalByPath("/inventory/transaksi/t_stock_opname");
+  const approvalData = getApprovalByPath("/inventory/opname/fisik");
   if (!approvalData) {
     throw new Error("Approval data not found");
   }

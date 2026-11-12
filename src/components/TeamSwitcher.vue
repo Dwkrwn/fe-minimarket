@@ -8,7 +8,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -345,13 +344,13 @@ watch(
           :side="isMobile ? 'bottom' : 'right'"
           :side-offset="4"
         >
-          <DropdownMenuLabel class="text-xs text-muted-foreground px-2 py-1.5">
-            Responsibility
+          <DropdownMenuLabel class="px-2 py-1.5 text-xs text-muted-foreground">
+            Pilih unit kerja
           </DropdownMenuLabel>
           <DropdownMenuItem
-            v-for="(respo, index) in respos"
+            v-for="respo in respos"
             :key="respo.id"
-            class="px-3 py-2 cursor-pointer flex-col items-start"
+            class="flex cursor-pointer flex-col items-start px-3 py-2"
             :class="activeTeam.id === respo.id ? 'bg-primary/10' : ''"
             @click="activeTeam = respo"
           >
@@ -360,7 +359,6 @@ watch(
                 :class="activeTeam.id === respo.id ? 'font-semibold' : ''"
                 >{{ respo.unitBisnisName }}</span
               >
-              <DropdownMenuShortcut>⌘{{ index + 1 }}</DropdownMenuShortcut>
             </div>
             <span class="text-xs text-muted-foreground">{{
               respo.respoName
