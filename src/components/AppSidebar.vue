@@ -10,9 +10,9 @@ import VoiceMenuSearch from "@/components/VoiceMenuSearch.vue";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type MenuItem } from "@/views/setup/menu/service";
-import { getUnifiedNotifications } from "@/views/notifikasi/service";
 import { toast } from "vue-sonner";
 import { useSidebarRefresh } from "@/composables/useSidebarRefresh";
+import { useNotificationBadge } from "@/composables/useNotificationBadge";
 
 import {
   Sidebar,
@@ -22,8 +22,6 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-
-const NOTIFICATION_STORAGE_KEY = "bb_read_notifications";
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   collapsible: "icon",
@@ -38,23 +36,9 @@ const refreshing = ref(false);
 const dynamicMenus = ref<MenuItem[]>([]);
 const selectedRespoId = ref<string>("");
 
-// Notification badge state
-const notificationCount = ref(0);
-const isLoadingNotifications = ref(false);
-const readNotificationIds = ref<Set<string>>(new Set());
-
-// Load read notifications from localStorage
-const loadReadNotifications = () => {
-  try {
-    const stored = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
-    if (stored) {
-      const ids = JSON.parse(stored) as string[];
-      readNotificationIds.value = new Set(ids);
-    }
-  } catch (e) {
-    console.error("Failed to load read notifications from localStorage:", e);
-  }
-};
+// Notification badge is owned by Layout.vue via the shared composable; this
+// component only consumes the reactive count (no own fetch/interval/watchers).
+const { notificationCount } = useNotificationBadge();
 
 // Auto-refresh composable
 const { refreshTrigger, resetRefresh } = useSidebarRefresh();
@@ -64,6 +48,7 @@ const MODULE_LABELS: Record<string, string> = {
   SETUP: "Pengaturan",
   PURCHASING: "Pembelian",
   INVENTORY: "Persediaan",
+  POS: "Transaksi",
   MARKETING: "Pemasaran",
   SALES: "Penjualan",
   FINANCE: "Keuangan",
@@ -81,6 +66,8 @@ const SUB_MODULE_LABELS: Record<string, string> = {
   PENERIMAAN: "Penerimaan Barang",
   TAGIHAN: "Tagihan",
   LAPORAN: "Laporan",
+  KASIR: "Kasir",
+  SHIFT: "Shift",
 };
 
 function toSentenceCase(value: string): string {
@@ -105,6 +92,7 @@ const getModuleIcon = (moduleName: string): string => {
     PURCHASING: "ShoppingCart",
     MARKETING: "Megaphone",
     INVENTORY: "Package",
+    POS: "ScanLine",
     DEV: "Code2",
     PRODUCTION: "Factory",
     SALES: "TrendingUp",
@@ -148,10 +136,14 @@ const loadMenus = async (showToast = false) => {
 };
 
 const refreshSession = async () => {
-  try { await authStore.refreshUserData(); await loadMenus(); } catch { /* API layer handles expired sessions. */ }
+  try {
+    // Throttled (5 min TTL) so focus/interval does not hammer /auth/me.
+    const refreshed = await authStore.refreshUserDataIfStale();
+    if (refreshed) await loadMenus();
+  } catch { /* API layer handles expired sessions. */ }
 };
 let sessionInterval: ReturnType<typeof setInterval>;
-onMounted(() => { window.addEventListener('focus', refreshSession); sessionInterval = setInterval(refreshSession, 60000); });
+onMounted(() => { window.addEventListener('focus', refreshSession); sessionInterval = setInterval(refreshSession, 300000); });
 onUnmounted(() => { window.removeEventListener('focus', refreshSession); clearInterval(sessionInterval); });
 
 const handleRefreshMenu = async () => {
@@ -161,79 +153,12 @@ const handleRefreshMenu = async () => {
   refreshing.value = false;
 };
 
-/** Fetch notification counts */
-const fetchNotificationCounts = async (forceRefresh = false) => {
-  if (!authStore.user?.capabilities?.notifications || isLoadingNotifications.value) return;
-
-  try {
-    isLoadingNotifications.value = true;
-
-    // Reload read notifications from localStorage
-    loadReadNotifications();
-
-    const unifiedResponse = await getUnifiedNotifications(1, 100, forceRefresh);
-    const approvalRows = unifiedResponse.data?.approval || [];
-    const revisiRows = unifiedResponse.data?.revisi || [];
-
-    // Cleanup stale IDs that no longer exist in backend response
-    const validIds = new Set(
-      (unifiedResponse.active_ids || []).map((id) => String(id)),
-    );
-    const cleanedIds = [...readNotificationIds.value].filter((id) =>
-      validIds.has(id),
-    );
-    if (cleanedIds.length !== readNotificationIds.value.size) {
-      readNotificationIds.value = new Set(cleanedIds);
-      localStorage.setItem(
-        NOTIFICATION_STORAGE_KEY,
-        JSON.stringify(cleanedIds),
-      );
-    }
-
-    // Count unread notifications (check both API status and localStorage)
-    const approvalUnread = approvalRows.filter(
-      (n: any) => !n.status && !readNotificationIds.value.has(String(n.id)),
-    ).length;
-    const revisiUnread = revisiRows.filter(
-      (n: any) => !n.status && !readNotificationIds.value.has(String(n.id)),
-    ).length;
-
-    notificationCount.value = approvalUnread + revisiUnread;
-  } catch (error) {
-    console.error("Failed to load notification counts:", error);
-    // Don't show error toast, just fail silently
-    notificationCount.value = 0;
-  } finally {
-    isLoadingNotifications.value = false;
-  }
-};
-
 // Watch for auto-refresh trigger from other components
 watch(refreshTrigger, async (newVal) => {
   if (newVal > 0) {
     await loadMenus(true);
   }
 });
-
-// Listen for notification read events (custom event from notifikasi.vue)
-const handleNotificationRead = () => {
-  // Reload read notifications from localStorage and recalculate count
-  loadReadNotifications();
-  fetchNotificationCounts();
-};
-
-// Listen for notification data updates (e.g. send approval success)
-const handleNotificationsUpdated = () => {
-  fetchNotificationCounts(true);
-};
-
-// Listen to storage changes (for cross-tab sync)
-const handleStorageChange = (e: StorageEvent) => {
-  if (e.key === NOTIFICATION_STORAGE_KEY) {
-    loadReadNotifications();
-    fetchNotificationCounts();
-  }
-};
 
 // Listen to respoChanged event to reload menus for non-super admin
 const handleRespoChanged = async () => {
@@ -244,29 +169,10 @@ const handleRespoChanged = async () => {
 
 onMounted(() => {
   window.addEventListener("respoChanged", handleRespoChanged);
-  window.addEventListener("notificationRead", handleNotificationRead);
-  window.addEventListener("notificationsUpdated", handleNotificationsUpdated);
-  window.addEventListener("storage", handleStorageChange);
 });
 
 onUnmounted(() => {
   window.removeEventListener("respoChanged", handleRespoChanged);
-  window.removeEventListener("notificationRead", handleNotificationRead);
-  window.removeEventListener(
-    "notificationsUpdated",
-    handleNotificationsUpdated,
-  );
-  window.removeEventListener("storage", handleStorageChange);
-});
-
-// Setup interval to refresh notification counts every 5 minutes
-const notificationInterval = setInterval(() => {
-  fetchNotificationCounts();
-}, 300000); // 5 minutes (300000ms)
-
-// Cleanup interval on unmount
-onUnmounted(() => {
-  clearInterval(notificationInterval);
 });
 
 onMounted(async () => {
@@ -313,17 +219,7 @@ onMounted(async () => {
 
   await loadMenus();
   loading.value = false;
-
-  // Fetch notification counts after menu loads
-  await fetchNotificationCounts(true);
 });
-
-watch(
-  () => route.path,
-  async () => {
-    await fetchNotificationCounts(true);
-  },
-);
 
 // Watch selectedRespoId - SelectRespo is now managed by TeamSwitcher
 watch(selectedRespoId, (newVal) => {
@@ -670,7 +566,7 @@ const data = computed(() => {
 
 <template>
   <Sidebar v-bind="props">
-    <SidebarHeader class="bg-sidebar-header text-sidebar-header-foreground">
+    <SidebarHeader class="border-b border-sidebar-border/70 bg-sidebar-header px-2 py-2.5 text-sidebar-header-foreground">
       <TeamSwitcher
         @selectRespo="
           (respoId) => {
@@ -681,16 +577,16 @@ const data = computed(() => {
     </SidebarHeader>
 
     <SidebarContent class="gap-1">
-      <div class="px-3 py-3 group-data-[collapsible=icon]:px-2">
+      <div class="px-3 pb-1 pt-3 group-data-[collapsible=icon]:px-2">
         <div class="relative flex items-center gap-2">
           <div class="relative flex-1">
             <Search
-              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-data-[collapsible=icon]:left-2"
+              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/80 group-data-[collapsible=icon]:left-2"
             />
             <Input
               v-model="searchQuery"
               placeholder="Cari menu..."
-              class="h-10 rounded-lg border-input bg-card pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground group-data-[collapsible=icon]:cursor-pointer group-data-[collapsible=icon]:pl-8 group-data-[collapsible=icon]:pr-8"
+              class="h-10 rounded-xl border-sidebar-border/70 bg-card/80 pl-9 pr-9 text-sm text-foreground shadow-sm shadow-black/[0.02] transition-colors placeholder:text-muted-foreground focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/30 group-data-[collapsible=icon]:cursor-pointer group-data-[collapsible=icon]:pl-8 group-data-[collapsible=icon]:pr-8"
               @focus="handleSearchFocus"
               @click="handleSearchFocus"
               :readonly="sidebar.state.value === 'collapsed'"
@@ -698,7 +594,7 @@ const data = computed(() => {
             <button
               v-if="searchQuery"
               type="button"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground group-data-[collapsible=icon]:right-2"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:right-2"
               aria-label="Hapus pencarian"
               @mousedown.prevent
               @click="searchQuery = ''"
@@ -716,7 +612,7 @@ const data = computed(() => {
         <!-- Muat ulang menu -->
         <button
           type="button"
-          class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground group-data-[collapsible=icon]:px-2"
+          class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground/85 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:px-2"
           :disabled="refreshing || loading"
           title="Muat ulang daftar menu"
           @click="handleRefreshMenu"
@@ -751,7 +647,7 @@ const data = computed(() => {
     </SidebarContent>
 
     <SidebarFooter
-      class="gap-2 border-t border-sidebar-border bg-sidebar pb-2"
+      class="gap-2 border-t border-sidebar-border/70 bg-sidebar/80 px-2 pb-2.5 pt-2 backdrop-blur"
     >
       <div v-if="loading" class="px-3 py-2">
         <div class="flex items-center gap-2">

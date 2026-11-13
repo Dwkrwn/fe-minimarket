@@ -1,4 +1,8 @@
-﻿import { themeQuartz } from 'ag-grid-community'
+﻿import { themeQuartz, ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
+
+// Register AG Grid modules here (not in main.ts) so the whole grid library is
+// only pulled in when a table chunk loads, instead of bloating the entry bundle.
+ModuleRegistry.registerModules([AllCommunityModule])
 
 /**
  * AG Grid Theme Configuration

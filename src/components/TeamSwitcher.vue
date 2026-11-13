@@ -307,7 +307,7 @@ watch(
           >
             <div
               :class="[
-                'flex shrink-0 items-center justify-center rounded-lg aspect-auto',
+                'flex shrink-0 items-center justify-center rounded-xl bg-card/80 p-1 shadow-sm ring-1 ring-sidebar-border/60 aspect-auto',
                 isCollapsed ? 'w-8' : 'w-15',
               ]"
             >
@@ -327,7 +327,7 @@ watch(
                 {{ (activeTeam.companyName === 'Bos Baut' || activeTeam.companyName === 'Loading...' || !activeTeam.companyName) ? 'Mini Market' : activeTeam.companyName }}
               </span>
               <span
-                class="whitespace-normal break-words text-xs text-sidebar-header-foreground/70"
+                class="whitespace-normal break-words text-xs text-sidebar-header-foreground/80"
               >
                 {{ activeTeam.unitBisnisName }}
               </span>

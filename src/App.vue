@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from 'vue-router'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Toaster } from '@/components/ui/sonner'
 import TokenExpiredDialog from '@/components/dialog/TokenExpiredDialog.vue'
 import GlobalDialog from '@/components/dialog/GlobalDialog.vue'
@@ -10,7 +10,9 @@ import { setTokenExpiredCallback } from '@/lib/api'
 import { useAfkLogout } from '@/composables/useAfkLogout'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
-import ChatWidget from "./views/ChatWidget.vue";
+// ChatWidget is only needed when the user opens the assistant; keep it out of
+// the initial bundle.
+const ChatWidget = defineAsyncComponent(() => import('./views/ChatWidget.vue'));
 import { navigationGuardState, handleConfirm, handleCancel } from "@/lib/navigationGuard";
 
 const showTokenExpiredDialog = ref(false)

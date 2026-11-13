@@ -3,18 +3,16 @@ import { computed, ref, onMounted, watch, onUnmounted } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { Bell, MessageSquare, Moon, Sun } from "lucide-vue-next";
 import AppSidebar from "@/components/AppSidebar.vue";
-import { useAuthStore } from "@/stores/auth";
 import { useChatbot } from "@/composables/useChatbot";
+import { useNotificationBadge } from "@/composables/useNotificationBadge";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { getUnifiedNotifications } from "@/views/notifikasi/service";
 
 const { isOpen, toggleChat } = useChatbot();
 
-const NOTIFICATION_STORAGE_KEY = "bb_read_notifications";
 const LEGACY_THEME_KEY = "bb_color_theme";
 const LEGACY_THEME_NAMES = [
   "zinc",
@@ -42,6 +40,9 @@ const pageTitleMap: Record<string, string> = {
 const pageTitle = computed(
   () => pageTitleMap[route.meta.title as string] || (route.meta.title as string) || "Dasbor",
 );
+
+// Layar kasir tampil fullscreen: sidebar & header disembunyikan agar fokus.
+const isFullscreen = computed(() => route.meta.fullscreen === true);
 
 // Tanggal & jam dalam bahasa Indonesia
 const currentDateTime = ref(new Date());
@@ -84,74 +85,13 @@ const timeOfDay = computed(() => {
 
 let timeInterval: ReturnType<typeof setInterval>;
 
-// Notifikasi
-const notificationCount = ref(0);
-const readNotificationIds = ref<Set<string>>(new Set());
-
-const loadReadNotifications = () => {
-  try {
-    const stored = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
-    if (stored) {
-      readNotificationIds.value = new Set(JSON.parse(stored) as string[]);
-    }
-  } catch (e) {
-    console.error("Gagal membaca status notifikasi:", e);
-  }
-};
-
-const fetchNotificationCounts = async (forceRefresh = false) => {
-  if (!useAuthStore().user?.capabilities?.notifications) return;
-  try {
-    loadReadNotifications();
-
-    const unifiedResponse = await getUnifiedNotifications(1, 100, forceRefresh);
-    const approvalRows = unifiedResponse.data?.approval || [];
-    const revisiRows = unifiedResponse.data?.revisi || [];
-
-    const validIds = new Set<string>(
-      (unifiedResponse.active_ids || []).map((id) => String(id)),
-    );
-
-    const cleanedIds = [...readNotificationIds.value].filter((id) =>
-      validIds.has(id),
-    );
-    if (cleanedIds.length !== readNotificationIds.value.size) {
-      readNotificationIds.value = new Set(cleanedIds);
-      localStorage.setItem(
-        NOTIFICATION_STORAGE_KEY,
-        JSON.stringify(cleanedIds),
-      );
-    }
-
-    const approvalUnread = approvalRows.filter(
-      (n: any) => !n.status && !readNotificationIds.value.has(String(n.id)),
-    ).length;
-    const revisiUnread = revisiRows.filter(
-      (n: any) => !n.status && !readNotificationIds.value.has(String(n.id)),
-    ).length;
-
-    notificationCount.value = approvalUnread + revisiUnread;
-  } catch (error) {
-    console.error("Gagal memuat jumlah notifikasi:", error);
-    notificationCount.value = 0;
-  }
-};
-
-const handleNotificationRead = () => {
-  loadReadNotifications();
-  fetchNotificationCounts();
-};
-
-const handleNotificationsUpdated = () => {
-  fetchNotificationCounts(true);
-};
-
-const handleStorageChange = (e: StorageEvent) => {
-  if (e.key === NOTIFICATION_STORAGE_KEY) {
-    loadReadNotifications();
-    fetchNotificationCounts();
-  }
-};
+// Notifikasi — state + polling dimiliki oleh composable bersama supaya
+// Layout dan AppSidebar tidak melakukan fetch ganda.
+const {
+  notificationCount,
+  start: startNotificationBadge,
+  stop: stopNotificationBadge,
+} = useNotificationBadge();
 
 const goToNotifications = () => {
   router.push("/notifikasi");
@@ -195,36 +135,17 @@ onMounted(() => {
   }
 
   cleanupLegacyThemes();
-  fetchNotificationCounts(true);
+  startNotificationBadge();
 
   timeInterval = setInterval(() => {
     currentDateTime.value = new Date();
   }, 15000);
-
-  window.addEventListener("notificationRead", handleNotificationRead);
-  window.addEventListener("notificationsUpdated", handleNotificationsUpdated);
-  window.addEventListener("storage", handleStorageChange);
 });
 
 onUnmounted(() => {
-  window.removeEventListener("notificationRead", handleNotificationRead);
-  window.removeEventListener(
-    "notificationsUpdated",
-    handleNotificationsUpdated,
-  );
-  window.removeEventListener("storage", handleStorageChange);
+  stopNotificationBadge();
   clearInterval(timeInterval);
 });
-
-const notificationInterval = setInterval(fetchNotificationCounts, 300000);
-onUnmounted(() => clearInterval(notificationInterval));
-
-watch(
-  () => route.path,
-  async () => {
-    await fetchNotificationCounts(true);
-  },
-);
 
 // Tutup sidebar di layar kecil saat pindah halaman
 watch(
@@ -244,15 +165,26 @@ watch(
 </script>
 
 <template>
-  <SidebarProvider :default-open="true">
+  <!-- Mode fullscreen (mis. Mesin Kasir): tanpa sidebar & header. -->
+  <div v-if="isFullscreen" class="relative min-h-screen bg-background">
+    <RouterView v-slot="{ Component, route: currentRoute }">
+      <Transition name="page">
+        <div :key="currentRoute.path" class="min-h-screen">
+          <component :is="Component" v-if="Component" />
+        </div>
+      </Transition>
+    </RouterView>
+  </div>
+
+  <SidebarProvider v-else :default-open="true">
     <AppSidebar />
     <SidebarInset class="min-w-0 overflow-hidden bg-background">
       <header
-        class="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6"
+        class="sticky top-0 z-10 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70 md:px-6"
       >
         <div class="flex items-center gap-3">
           <SidebarTrigger
-            class="h-10 w-10 shrink-0 rounded-lg border border-border bg-card text-foreground hover:bg-muted"
+            class="h-10 w-10 shrink-0 rounded-xl border border-border/70 bg-card text-foreground shadow-sm transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
           />
 
           <div class="min-w-0 flex-1">
@@ -267,7 +199,7 @@ watch(
           <div class="flex items-center gap-1.5">
             <button
               type="button"
-              class="relative flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              class="relative flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
               title="Buka notifikasi"
               aria-label="Buka notifikasi"
               @click="goToNotifications"
@@ -283,11 +215,11 @@ watch(
 
             <button
               type="button"
-              class="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
               :class="
                 isOpen
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  : 'text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground'
               "
               title="Buka asisten"
               aria-label="Buka asisten"
@@ -298,7 +230,7 @@ watch(
 
             <button
               type="button"
-              class="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              class="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
               :title="isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
               :aria-label="isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
               @click="toggleTheme"
@@ -310,9 +242,9 @@ watch(
         </div>
       </header>
 
-      <main class="flex-1">
+      <main class="relative flex-1">
         <RouterView v-slot="{ Component, route: currentRoute }">
-          <Transition name="page" mode="out-in">
+          <Transition name="page">
             <div :key="currentRoute.path">
               <component :is="Component" v-if="Component" />
             </div>
@@ -324,9 +256,17 @@ watch(
 </template>
 
 <style scoped>
-.page-enter-active,
+.page-enter-active {
+  transition: opacity 0.12s ease;
+}
+
+/* Keep the outgoing page out of the layout so the incoming page can render
+   immediately (no mode="out-in" delay, no height jump). */
 .page-leave-active {
-  transition: opacity 0.15s ease;
+  transition: opacity 0.12s ease;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .page-enter-from,

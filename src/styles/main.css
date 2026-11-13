@@ -82,87 +82,94 @@
 }
 
 /* ========================================
-   PAPAN TOKO - Leaf Green + Warm Paper
-   Palet tenang untuk pengguna toko sehari-hari.
+   PASTEL CLOUD - Soft Mint + Lavender
+   Palet pastel modern: lembut, terang, tetap kontras.
    ======================================== */
 :root {
-  /* Kanvas kertas hangat, tidak menyilaukan */
-  --background: hsl(42 24% 97%);
-  --foreground: hsl(155 15% 12%);
+  /* Kanvas putih kebiruan yang lembut */
+  --background: hsl(220 40% 98.5%);
+  --foreground: hsl(228 22% 18%);
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(155 15% 12%);
+  --card-foreground: hsl(228 22% 18%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(155 15% 12%);
-  /* Hijau daun tua sebagai aksi utama */
-  --primary: hsl(151 52% 28%);
+  --popover-foreground: hsl(228 22% 18%);
+  /* Sage lembut sebagai aksi utama, tetap aman untuk teks putih */
+  --primary: hsl(164 34% 36%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(145 18% 93%);
-  --secondary-foreground: hsl(155 20% 18%);
-  --muted: hsl(45 16% 94%);
-  --muted-foreground: hsl(155 8% 38%);
-  --accent: hsl(148 32% 91%);
-  --accent-foreground: hsl(151 48% 19%);
-  --destructive: hsl(4 68% 47%);
+  /* Lavender & mint pastel untuk permukaan sekunder */
+  --secondary: hsl(250 45% 96%);
+  --secondary-foreground: hsl(240 22% 26%);
+  --muted: hsl(225 30% 96%);
+  --muted-foreground: hsl(228 10% 44%);
+  --accent: hsl(158 52% 94%);
+  --accent-foreground: hsl(164 42% 24%);
+  --destructive: hsl(352 58% 56%);
   --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(145 10% 87%);
-  --input: hsl(145 10% 84%);
-  --ring: hsl(151 52% 34%);
-  --chart-1: hsl(151 45% 34%);
-  --chart-2: hsl(38 85% 47%);
-  --chart-3: hsl(190 55% 38%);
-  --chart-4: hsl(15 68% 50%);
-  --chart-5: hsl(265 32% 50%);
-  --radius: 0.625rem;
-  /* Sidebar kertas hangat, header hijau tua */
-  --sidebar: hsl(45 30% 98.5%);
-  --sidebar-foreground: hsl(155 15% 16%);
-  --sidebar-primary: hsl(151 52% 28%);
+  --border: hsl(226 26% 91%);
+  --input: hsl(226 22% 88%);
+  --ring: hsl(164 40% 48%);
+  /* Warna grafik pastel namun tetap terbaca */
+  --chart-1: hsl(160 45% 55%);
+  --chart-2: hsl(255 55% 70%);
+  --chart-3: hsl(20 75% 72%);
+  --chart-4: hsl(200 60% 68%);
+  --chart-5: hsl(338 60% 72%);
+  --radius: 0.75rem;
+  /* Sidebar mint sangat muda dengan aksen pastel */
+  --sidebar: hsl(160 45% 98.5%);
+  --sidebar-foreground: hsl(228 20% 22%);
+  --sidebar-primary: hsl(164 34% 36%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(148 34% 92%);
-  --sidebar-accent-foreground: hsl(151 48% 19%);
-  --sidebar-border: hsl(145 12% 88%);
-  --sidebar-ring: hsl(151 52% 34%);
-  --sidebar-header: hsl(151 45% 22%);
-  --sidebar-header-foreground: hsl(0 0% 99%);
+  --sidebar-accent: hsl(158 55% 93%);
+  --sidebar-accent-foreground: hsl(164 42% 24%);
+  --sidebar-border: hsl(160 24% 90%);
+  --sidebar-ring: hsl(164 40% 48%);
+  --sidebar-header: hsl(158 60% 94%);
+  --sidebar-header-foreground: hsl(164 38% 24%);
+  /* Cahaya latar pastel */
+  --glow-a: hsl(158 80% 90% / 0.5);
+  --glow-b: hsl(255 80% 93% / 0.55);
 }
 
 .dark {
-  /* Kanvas hijau malam, tetap hangat */
-  --background: hsl(155 14% 8%);
-  --foreground: hsl(45 20% 94%);
-  --card: hsl(155 12% 11%);
-  --card-foreground: hsl(45 20% 94%);
-  --popover: hsl(155 12% 11%);
-  --popover-foreground: hsl(45 20% 94%);
-  --primary: hsl(151 45% 52%);
-  --primary-foreground: hsl(155 30% 8%);
-  --secondary: hsl(155 10% 16%);
-  --secondary-foreground: hsl(45 15% 92%);
-  --muted: hsl(155 10% 15%);
-  --muted-foreground: hsl(145 8% 64%);
-  --accent: hsl(151 20% 18%);
-  --accent-foreground: hsl(148 40% 88%);
-  --destructive: hsl(4 62% 50%);
+  /* Malam ungu-biru yang tetap tenang */
+  --background: hsl(228 20% 9%);
+  --foreground: hsl(225 25% 94%);
+  --card: hsl(228 18% 12%);
+  --card-foreground: hsl(225 25% 94%);
+  --popover: hsl(228 18% 12%);
+  --popover-foreground: hsl(225 25% 94%);
+  --primary: hsl(160 42% 62%);
+  --primary-foreground: hsl(164 40% 10%);
+  --secondary: hsl(252 16% 18%);
+  --secondary-foreground: hsl(250 30% 92%);
+  --muted: hsl(228 14% 16%);
+  --muted-foreground: hsl(228 12% 66%);
+  --accent: hsl(160 20% 20%);
+  --accent-foreground: hsl(158 45% 88%);
+  --destructive: hsl(352 55% 60%);
   --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(155 10% 19%);
-  --input: hsl(155 10% 22%);
-  --ring: hsl(151 45% 52%);
-  --chart-1: hsl(151 45% 55%);
-  --chart-2: hsl(38 85% 58%);
-  --chart-3: hsl(190 55% 52%);
-  --chart-4: hsl(15 68% 60%);
-  --chart-5: hsl(265 35% 65%);
-  --radius: 0.625rem;
-  --sidebar: hsl(155 14% 10%);
-  --sidebar-foreground: hsl(45 20% 92%);
-  --sidebar-primary: hsl(151 45% 52%);
-  --sidebar-primary-foreground: hsl(155 30% 8%);
-  --sidebar-accent: hsl(151 18% 17%);
-  --sidebar-accent-foreground: hsl(148 40% 88%);
-  --sidebar-border: hsl(155 10% 19%);
-  --sidebar-ring: hsl(151 45% 52%);
-  --sidebar-header: hsl(151 35% 14%);
-  --sidebar-header-foreground: hsl(45 20% 96%);
+  --border: hsl(228 14% 20%);
+  --input: hsl(228 14% 23%);
+  --ring: hsl(160 42% 58%);
+  --chart-1: hsl(160 40% 62%);
+  --chart-2: hsl(255 50% 72%);
+  --chart-3: hsl(20 70% 70%);
+  --chart-4: hsl(200 55% 66%);
+  --chart-5: hsl(338 55% 70%);
+  --radius: 0.75rem;
+  --sidebar: hsl(228 18% 11%);
+  --sidebar-foreground: hsl(225 25% 92%);
+  --sidebar-primary: hsl(160 42% 62%);
+  --sidebar-primary-foreground: hsl(164 40% 10%);
+  --sidebar-accent: hsl(160 18% 19%);
+  --sidebar-accent-foreground: hsl(158 45% 88%);
+  --sidebar-border: hsl(228 14% 20%);
+  --sidebar-ring: hsl(160 42% 58%);
+  --sidebar-header: hsl(160 20% 15%);
+  --sidebar-header-foreground: hsl(158 40% 92%);
+  --glow-a: hsl(160 40% 30% / 0.22);
+  --glow-b: hsl(255 40% 35% / 0.2);
 }
 
 @layer base {
@@ -178,6 +185,18 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  /* Fixed decorative glow. A pseudo-element avoids background-attachment:
+     fixed, which forced a repaint of the whole viewport on every scroll. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1100px 520px at 8% -10%, var(--glow-a), transparent 65%),
+      radial-gradient(900px 480px at 100% 0%, var(--glow-b), transparent 60%);
   }
   ::selection {
     background-color: color-mix(in srgb, var(--primary) 22%, transparent);
@@ -208,15 +227,16 @@ body ::-webkit-scrollbar-track,
 html ::-webkit-scrollbar-thumb,
 body ::-webkit-scrollbar-thumb,
 * ::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary) 45%, var(--background));
+  border-radius: 999px;
   transition: all 0.2s ease;
 }
 
 html ::-webkit-scrollbar-thumb:hover,
 body ::-webkit-scrollbar-thumb:hover,
 * ::-webkit-scrollbar-thumb:hover {
-  opacity: 0.8;
+  background: color-mix(in srgb, var(--primary) 65%, var(--background));
+  opacity: 0.9;
 }
 
 /* Firefox Scrollbar */
@@ -239,8 +259,8 @@ html.dark ::-webkit-scrollbar-thumb,
 body.dark ::-webkit-scrollbar-thumb,
 .dark ::-webkit-scrollbar-thumb,
 .dark * ::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary) 45%, var(--background));
+  border-radius: 999px;
 }
 
 /* Firefox Dark Mode */

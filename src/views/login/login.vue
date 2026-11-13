@@ -79,6 +79,9 @@ const handleLogin = async () => {
       }
       // Step 4: Simpan data session lengkap
       authStore.login(response.token, userData)
+      // login() no longer writes the SelectRespo cache on every refresh, so do it
+      // here where a real login happens.
+      authStore.initializeSelectRespo()
       // Step 5: Fetch approval data from new API endpoint
       try {
         const approvalResponse = await fetch(

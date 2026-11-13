@@ -18,4 +18,18 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Only split libraries that are part of the entry bundle. Heavy,
+          // lazy-only libraries (ag-grid, chart.js, leaflet, jspdf) are left to
+          // Rollup's default splitting so they are not pulled into the initial
+          // modulepreload graph.
+          'vendor-vue': ['vue', 'vue-router', 'pinia'],
+          'vendor-lucide': ['lucide-vue-next'],
+        },
+      },
+    },
+  },
 })

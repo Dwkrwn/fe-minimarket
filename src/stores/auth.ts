@@ -40,6 +40,11 @@ export interface ApprovalData {
 
 const callbacks: (() => void)[] = []
 export const onTokenExpired = (callback: () => void) => callbacks.push(callback)
+
+// Timestamp of the last successful background profile refresh. Kept outside the
+// store state so it survives component unmounts but is shared per page load.
+let lastRefreshAt = 0
+const DEFAULT_REFRESH_TTL_MS = 5 * 60_000
 export const useAuthStore = defineStore('auth', () => {
  const user = ref<SessionUser | null>(null)
  const token = ref<string | null>(null)
@@ -60,15 +65,17 @@ export const useAuthStore = defineStore('auth', () => {
  const initializeSelectRespo = () => {
    // Compatibility cache for existing action directives; role is the source of permissions.
    localStorage.setItem('SelectRespo', JSON.stringify({ respoId: user.value?.role.id, respoName: user.value?.role.nama_role, menus: user.value?.menus || [], permissions: user.value?.permissions || {} }))
-   window.dispatchEvent(new Event('respoChanged'))
+   window.dispatchEvent(new CustomEvent('respoChanged', { detail: user.value?.role.id ?? null }))
  }
  const login = (authToken: string, data: SessionUser) => {
    token.value = authToken; user.value = { ...data, tipe: { value1: data.role.system_key === 'SUPER_ADMIN' ? 'SUPER ADMIN' : data.role.nama_role } }
    localStorage.setItem('auth_bb', JSON.stringify({ token: authToken, user: data }))
-   initializeSelectRespo()
+   // NOTE: initializeSelectRespo() is intentionally NOT called here. It writes
+   // localStorage and dispatches a window event, which is too costly to run on
+   // every background refresh/navigation. Real logins call it explicitly.
  }
  const logout = () => {
-   user.value = null; token.value = null
+   user.value = null; token.value = null; lastRefreshAt = 0
    for (const key of ['auth_bb', 'SelectRespo', 'approval_list']) localStorage.removeItem(key)
    window.dispatchEvent(new Event('respoChanged'))
  }
@@ -95,11 +102,26 @@ export const useAuthStore = defineStore('auth', () => {
      throw error
    }
  }
+ const refreshUserDataIfStale = async (ttl = DEFAULT_REFRESH_TTL_MS) => {
+   if (!token.value) return false
+   if (Date.now() - lastRefreshAt < ttl) return false
+   lastRefreshAt = Date.now()
+   try {
+     const refreshed = await refreshUserData()
+     // Keep the SelectRespo compatibility cache in sync without doing it on
+     // every navigation (only on the throttled background refresh).
+     if (refreshed) initializeSelectRespo()
+     return refreshed
+   } catch {
+     // 401 is already handled by the api layer; ignore transient network errors.
+     return false
+   }
+ }
  const hasPermission = (menuId: string, action: 'read' | 'create' | 'update' | 'delete' | 'print', _respoId?: string) =>
    isSuperAdmin.value || !!user.value?.permissions[menuId]?.[('is_' + action) as keyof Permission]
  const hasAccess = (menuId: string) => hasPermission(menuId, 'read')
  const getMenuPermissions = () => (user.value?.menus || []).map(menu => ({ m_menu_id: menu.id, m_menu: menu, ...user.value?.permissions[menu.id] }))
  const saveApprovalList = (list: ApprovalData[]) => localStorage.setItem('approval_list', JSON.stringify(list))
  const getApprovalList = (): ApprovalData[] => []
- return { user, token, currentUser, isAuthenticated, isSuperAdmin, isManager, tipeUser, userDetails, respos, login, logout, logoutWithServer, handleTokenExpired, checkAuth, refreshUserData, initializeSelectRespo, hasPermission, hasAccess, getMenuPermissions, saveApprovalList, getApprovalList }
+ return { user, token, currentUser, isAuthenticated, isSuperAdmin, isManager, tipeUser, userDetails, respos, login, logout, logoutWithServer, handleTokenExpired, checkAuth, refreshUserData, refreshUserDataIfStale, initializeSelectRespo, hasPermission, hasAccess, getMenuPermissions, saveApprovalList, getApprovalList }
 })

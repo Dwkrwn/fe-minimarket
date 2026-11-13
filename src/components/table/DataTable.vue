@@ -5,7 +5,8 @@ import type { ColDef, GridApi, GridReadyEvent, CellContextMenuEvent, RowClickedE
 import { getGridTheme } from './theme'
 import DateRangeFilterFloating from './DateRangeFilterFloating.vue'
 import { toast } from 'vue-sonner'
-import * as LucideIcons from 'lucide-vue-next'
+import { X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { iconMap } from '@/plugins/lucide'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/date'
 
@@ -592,7 +593,7 @@ const columnDefs = computed<ColDef[]>(() => {
                 clearAllFilters()
               }
             },
-            [h(LucideIcons.X, { class: 'h-4 w-4' })]
+            [h(X, { class: 'h-4 w-4' })]
           )
         }
       }),
@@ -695,7 +696,7 @@ const columnDefs = computed<ColDef[]>(() => {
               }
             }, col.actionButtons!.filter(btn => btn.ifShow ? btn.ifShow(rowData) : true).map((btn, idx) => {
               // Get icon component from lucide-vue-next
-              const IconComponent = (LucideIcons as any)[btn.icon]
+              const IconComponent = (iconMap as any)[btn.icon]
 
               // Use native button with Lucide icon for better click handling
               return h('button', {
@@ -787,16 +788,28 @@ const defaultColDef = computed<ColDef>(() => ({
   resizable: true
 }))
 
+// Stable per-row ids without JSON.stringify() on every row (which was run for
+// any row without an id and could dominate render time on large tables).
+const fallbackRowIds = new WeakMap<object, string>()
+let fallbackRowIdSeq = 0
+const resolveRowId = (data: any): string => {
+  if (data && data.id !== undefined && data.id !== null) return String(data.id)
+  if (data?._rowKey !== undefined && data._rowKey !== null) return String(data._rowKey)
+  if (data && typeof data === 'object') {
+    let id = fallbackRowIds.get(data)
+    if (!id) {
+      id = `row-${++fallbackRowIdSeq}`
+      fallbackRowIds.set(data, id)
+    }
+    return id
+  }
+  return String(data)
+}
+
 // Grid display options - show all borders
 const gridOptions = computed(() => ({
   enableCellSpan: true,  // Enable cell spanning feature
-  getRowId: (params: any) => {
-    const data = params.data
-    if (data && data.id !== undefined && data.id !== null) {
-      return String(data.id)
-    }
-    return String(data?._rowKey ?? JSON.stringify(data))
-  },
+  getRowId: (params: any) => resolveRowId(params.data),
   rowClassRules: {
     'ag-row-selected': (params: any) => params.node.selected
   }
@@ -1272,7 +1285,7 @@ defineExpose({
       <div class="flex items-center gap-2">
         <Button variant="outline" size="sm" :disabled="effectiveCurrentPage <= 1 || loading"
           @click="handleInternalPageChange(effectiveCurrentPage - 1)">
-          <component :is="LucideIcons.ChevronLeft" class="h-4 w-4 mr-1" />
+          <component :is="ChevronLeft" class="h-4 w-4 mr-1" />
           Previous
         </Button>
 
@@ -1283,7 +1296,7 @@ defineExpose({
         <Button variant="outline" size="sm" :disabled="effectiveCurrentPage >= effectiveTotalPages || loading"
           @click="handleInternalPageChange(effectiveCurrentPage + 1)">
           Next
-          <component :is="LucideIcons.ChevronRight" class="h-4 w-4 ml-1" />
+          <component :is="ChevronRight" class="h-4 w-4 ml-1" />
         </Button>
       </div>
     </div>

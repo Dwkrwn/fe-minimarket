@@ -2,9 +2,12 @@ import { createRouter, createWebHistory } from "vue-router";
 import { canVisit } from "@/lib/access";
 import { useAuthStore } from "@/stores/auth";
 import Layout from "@/components/Layout.vue";
-import Dashboard from "@/views/dashboard/Dashboard.vue";
-import Login from "@/views/login/login.vue";
-import Documentation from "@/views/document.vue";
+
+// Lazily load the heavier top-level views so they are not part of the entry
+// chunk (Dashboard, Login and the 79 KB documentation page).
+const Dashboard = () => import("@/views/dashboard/Dashboard.vue");
+const Login = () => import("@/views/login/login.vue");
+const Documentation = () => import("@/views/document.vue");
 
 // Import modular routes
 import { notificationRoutes } from "./notifications";
@@ -546,6 +549,80 @@ const router = createRouter({
           redirect: { name: "InventoryOpnameAdjustment" },
         },
 
+        // ====================================================================
+        // MODUL 4 : POS / TRANSAKSI
+        // 5 halaman final: mesin kasir, buka/tutup shift, 2 laporan.
+        // ====================================================================
+
+        // 1.1 Mesin Kasir (fullscreen fokus, sidebar & header disembunyikan)
+        {
+          path: "/pos/kasir",
+          name: "PosKasir",
+          component: () => import("@/views/pos/kasir/KasirView.vue"),
+          meta: {
+            title: "Mesin Kasir",
+            requiresAuth: true,
+            fullscreen: true,
+          },
+        },
+
+        // 2.1 Buka Shift
+        {
+          path: "/pos/shift/buka",
+          name: "PosShiftOpen",
+          component: () => import("@/views/pos/shift/OpenShiftView.vue"),
+          meta: {
+            title: "Buka Shift",
+            requiresAuth: true,
+          },
+        },
+
+        // 2.2 Tutup Shift (blind closing)
+        {
+          path: "/pos/shift/tutup",
+          name: "PosShiftClose",
+          component: () => import("@/views/pos/shift/CloseShiftView.vue"),
+          meta: {
+            title: "Tutup Shift",
+            requiresAuth: true,
+          },
+        },
+
+        // 3.1 Laporan Penjualan Shift Terkini
+        {
+          path: "/pos/reports/shift",
+          name: "PosShiftReport",
+          component: () => import("@/views/pos/reports/ShiftReportView.vue"),
+          meta: {
+            title: "Laporan Penjualan Shift",
+            requiresAuth: true,
+          },
+        },
+
+        // 3.2 Rekap Penjualan Harian Toko (hanya Admin/Super Admin)
+        {
+          path: "/pos/reports/harian",
+          name: "PosDailySales",
+          component: () => import("@/views/pos/reports/DailySalesView.vue"),
+          meta: {
+            title: "Rekap Penjualan Harian",
+            requiresAuth: true,
+          },
+        },
+
+        {
+          path: "/pos",
+          redirect: { name: "PosKasir" },
+        },
+        {
+          path: "/pos/shift",
+          redirect: { name: "PosShiftOpen" },
+        },
+        {
+          path: "/pos/reports",
+          redirect: { name: "PosShiftReport" },
+        },
+
         // Auto-generated CRUD routes (Setup)
         ...crudRoutes,
 
@@ -613,26 +690,19 @@ if (typeof window !== "undefined") {
 
   // Catch clicks on form controls, inputs, selects, dropdowns, popups, and detail rows
   window.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
+    const target = e.target as HTMLElement | null;
     if (!target) return;
 
     const currentRoute = router.currentRoute.value;
     if (!isFormRoute(currentRoute) || currentRoute.meta?.readOnly) return;
 
-    const text = (target.textContent || "").trim().toLowerCase();
-    const closestBtnText = target.closest("button")?.textContent?.toLowerCase() || "";
+    // Only buttons carry the save/cancel labels we care about. Reading
+    // textContent from arbitrary containers walks the whole subtree, so avoid it.
+    const buttonText = (target.closest("button")?.textContent || "").trim().toLowerCase();
+    const leafText = target.children.length === 0 ? (target.textContent || "").trim().toLowerCase() : "";
+    const text = buttonText || leafText;
 
-    const isSaveButton =
-      text.includes("simpan") ||
-      text.includes("perbarui") ||
-      text.includes("save") ||
-      text.includes("submit") ||
-      closestBtnText.includes("simpan") ||
-      closestBtnText.includes("perbarui") ||
-      closestBtnText.includes("save") ||
-      closestBtnText.includes("submit");
-
-    if (isSaveButton) {
+    if (/simpan|perbarui|save|submit/.test(text)) {
       isSaving = true;
       setTimeout(() => {
         isSaving = false;
@@ -640,28 +710,15 @@ if (typeof window !== "undefined") {
       return;
     }
 
-    const isBatalButton =
-      text === "batal" ||
-      text === "kembali" ||
-      closestBtnText === "batal" ||
-      closestBtnText === "kembali";
-
-    if (isBatalButton) {
+    if (text === "batal" || text === "kembali") {
       return;
     }
 
-    // Check if click was inside a form field, input, select, dialog, popup, or table in form
+    // Single closest() call instead of one per selector.
     const isFormFieldClick =
-      target.closest("form") !== null ||
-      target.closest("input") !== null ||
-      target.closest("select") !== null ||
-      target.closest("textarea") !== null ||
-      target.closest("[role='combobox']") !== null ||
-      target.closest("[role='option']") !== null ||
-      target.closest("[role='listbox']") !== null ||
-      target.closest("[role='dialog']") !== null ||
-      target.closest(".field-x") !== null ||
-      target.closest("table") !== null;
+      target.closest(
+        "form, input, select, textarea, [role='combobox'], [role='option'], [role='listbox'], [role='dialog'], .field-x, table"
+      ) !== null;
 
     if (isFormFieldClick) {
       isFormDirty = true;
@@ -699,15 +756,6 @@ if (typeof window !== "undefined") {
 // ============================================================================
 
 router.beforeEach(async (to, from, next) => {
-  console.log("Router guard transition:", {
-    to: to.path,
-    from: from.path,
-    isFormDirty,
-    isSaving,
-    toIsForm: isFormRoute(to),
-    fromIsForm: isFormRoute(from)
-  });
-
   // If we are saving, ensure dirty state is cleared
   if (isSaving) {
     isFormDirty = false;
@@ -715,8 +763,6 @@ router.beforeEach(async (to, from, next) => {
 
   // Intercept navigation if leaving a dirty form and not saving
   if (isFormRoute(from) && !from.meta?.readOnly && isFormDirty && !isSaving) {
-    console.log("Intercepting navigation away from dirty form");
-    
     // Exception: Allow redirect to login without prompting (e.g., session expired)
     if (to.name === "Login") {
       isFormDirty = false;
@@ -725,9 +771,7 @@ router.beforeEach(async (to, from, next) => {
     }
 
     const confirmLeave = await showConfirmDialog();
-    console.log("Confirm dialog result:", confirmLeave);
     if (!confirmLeave) {
-      console.log("User chose to stay, aborting navigation");
       next(false);
       return;
     }
@@ -736,11 +780,12 @@ router.beforeEach(async (to, from, next) => {
 
   const authStore = useAuthStore();
 
+  // IMPORTANT: do not await /auth/me here. Blocking the navigation on a network
+  // round-trip is what made page changes feel sluggish. Session validity is
+  // enforced by the API layer (401 -> logout), and the profile is refreshed in
+  // the background by refreshUserDataIfStale() in afterEach.
   authStore.checkAuth();
-  if (authStore.isAuthenticated) {
-    try { await authStore.refreshUserData(); }
-    catch { if (authStore.isAuthenticated) { next(false); return; } }
-  }
+
   if (to.meta.requiresAuth) {
     if (!authStore.isAuthenticated) { next({ name: 'Login', query: { redirect: to.fullPath } }); return; }
     if (!authStore.user || !canVisit(authStore.user, to.path, String(to.name), !!to.params.id, to.meta.requiresSuperAdmin === true)) {
@@ -759,6 +804,10 @@ router.afterEach((to) => {
   }
   const title = to.meta.title as string;
   document.title = title ? `Mini Market - ${title}` : "Mini Market";
+
+  // Refresh the session profile at most once every few minutes, off the
+  // navigation critical path.
+  if (to.meta.requiresAuth) void useAuthStore().refreshUserDataIfStale();
 });
 
 export default router;

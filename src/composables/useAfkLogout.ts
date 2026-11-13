@@ -14,6 +14,9 @@ const STORAGE_KEY = 'auth_afk_event'
 const DEFAULT_IDLE_TIMEOUT_MS = 3_600_000
 const WARNING_MS = 30_000
 const ACTIVITY_THROTTLE_MS = 1_000
+// Cross-tab activity broadcasts write to localStorage (synchronous). Doing that
+// on every mousemove throttle tick is expensive, so broadcast much less often.
+const ACTIVITY_BROADCAST_THROTTLE_MS = 15_000
 const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
   'mousemove',
   'mousedown',
@@ -34,6 +37,7 @@ const warningCountdownSeconds = ref(0)
 let logoutHandler: LogoutHandler | null = null
 let lastActivityAt = Date.now()
 let lastActivityBroadcastAt = 0
+let lastBroadcastAt = 0
 let warningTimer: ReturnType<typeof setTimeout> | null = null
 let logoutTimer: ReturnType<typeof setTimeout> | null = null
 let countdownTimer: ReturnType<typeof setInterval> | null = null
@@ -128,7 +132,10 @@ const onUserActivity = () => {
   if (now - lastActivityBroadcastAt < ACTIVITY_THROTTLE_MS) return
   lastActivityBroadcastAt = now
 
-  resetAfkTimer()
+  const shouldBroadcast = now - lastBroadcastAt >= ACTIVITY_BROADCAST_THROTTLE_MS
+  if (shouldBroadcast) lastBroadcastAt = now
+
+  resetAfkTimer({ broadcast: shouldBroadcast })
 }
 
 const handleStorageSync = (event: StorageEvent) => {
@@ -196,6 +203,7 @@ const startAfkWatcher = () => {
   forcingLogout = false
   lastActivityAt = Date.now()
   lastActivityBroadcastAt = 0
+  lastBroadcastAt = 0
   addListeners()
   scheduleTimersFromNow(0)
 }

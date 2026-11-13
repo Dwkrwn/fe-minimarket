@@ -133,14 +133,14 @@ const handleLogout = async () => {
         <DropdownMenuTrigger as-child>
           <SidebarMenuButton
             size="lg"
-            class="h-auto rounded-lg p-2 transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:p-1.5"
+            class="h-auto rounded-xl p-2 transition-colors hover:bg-sidebar-accent/60 group-data-[collapsible=icon]:p-1.5"
           >
-            <Avatar class="h-9 w-9 shrink-0 rounded-lg border border-sidebar-border bg-card">
+            <Avatar class="h-9 w-9 shrink-0 rounded-xl border border-sidebar-border/70 bg-card shadow-sm">
               <AvatarImage
                 :src="selectedCompany.logo"
                 :alt="selectedCompany.name"
               />
-              <AvatarFallback class="rounded-lg bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
+              <AvatarFallback class="rounded-xl bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
                 {{ userInitials }}
               </AvatarFallback>
             </Avatar>
@@ -156,7 +156,7 @@ const handleLogout = async () => {
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          class="min-w-56 rounded-lg p-1.5 shadow-lg"
+          class="min-w-56 rounded-xl p-1.5 shadow-lg shadow-black/[0.06]"
           :side="isMobile ? 'bottom' : 'right'"
           align="end"
           :side-offset="6"

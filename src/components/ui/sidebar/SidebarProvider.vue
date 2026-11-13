@@ -52,12 +52,7 @@ useEventListener("keydown", (event: KeyboardEvent) => {
 
 // Listen for custom event to close mobile sidebar on route change
 const handleCloseMobileSidebar = () => {
-  console.log('🔥 closeMobileSidebar event received', {
-    isMobile: isMobile.value,
-    openMobile: openMobile.value
-  })
   if (isMobile.value && openMobile.value) {
-    console.log('✅ Closing mobile sidebar')
     setOpenMobile(false)
   }
 }
