@@ -61,6 +61,14 @@ export interface UserDefaultListResponse {
   pagination: Pagination
 }
 
+export interface ResetUserPasswordResponse {
+  status: string
+  data: {
+    user: UserDefaultItem
+    temporary_password: string
+  }
+}
+
 /**
  * Get all user_default data
  * @param page - Page number (default: 1)
@@ -89,4 +97,5 @@ export function userPayload(data: Partial<UserDefaultItem>) {
 export const createUserDefault = (data:Partial<UserDefaultItem>, _hasDetails=false) => apiCall<{status:string;data:UserDefaultItem}>('/dynamic/user_default',{method:'POST',body:JSON.stringify(userPayload(data))})
 export const updateUserDefault = (id:string,data:Partial<UserDefaultItem>, _hasDetails=false) => apiCall<{status:string;data:UserDefaultItem}>('/dynamic/user_default/'+id,{method:'PUT',body:JSON.stringify(userPayload(data))})
 export const deleteUserDefault = (id:string) => apiCall<{status:string;message:string}>('/dynamic/user_default/'+id,{method:'DELETE'})
+export const resetUserDefaultPassword = (id: string) => apiCall<ResetUserPasswordResponse>('/dynamic/user_default/' + id + '/reset-password', { method: 'POST' })
 export const getUserDefaultListNoPagination = () => apiCall<UserDefaultListResponse>('/dynamic/user_default?no_pagination=true')

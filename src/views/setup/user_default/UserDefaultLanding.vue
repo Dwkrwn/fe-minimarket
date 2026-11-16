@@ -10,6 +10,7 @@ import {
   FileDown,
   Edit,
   Copy,
+  KeyRound,
   RefreshCw,
   X,
   Plus,
@@ -32,7 +33,7 @@ import {
 import { useActionButtons } from "@/composables/useActionButtons";
 import { usePermission } from "@/composables/usePermission";
 import { useAuthStore } from "@/stores/auth";
-import { getUserDefaultList, deleteUserDefault } from "./service";
+import { getUserDefaultList, deleteUserDefault, resetUserDefaultPassword } from "./service";
 import type { UserDefaultItem } from "./service";
 
 // ============================================================================
@@ -57,6 +58,15 @@ const { currentMenuId, canCreate, canUpdate, canDelete } = usePermission();
 const isDeleteDialogOpen = ref(false);
 const itemToDelete = ref<UserDefaultItem | null>(null);
 const isDeleting = ref(false);
+
+// ============================================================================
+// RESET PASSWORD STATE
+// ============================================================================
+const isResetDialogOpen = ref(false);
+const isResetResultOpen = ref(false);
+const isResetting = ref(false);
+const itemToReset = ref<UserDefaultItem | null>(null);
+const resetResult = ref<{ username: string; password: string } | null>(null);
 
 // ============================================================================
 // DATA & API STATE
@@ -152,6 +162,12 @@ const deleteDialogDescription = computed(() => {
   return `Apakah Anda yakin ingin menghapus User "${itemToDelete.value.username}"? Tindakan ini tidak dapat dibatalkan.`;
 });
 
+/** Deskripsi dialog reset password */
+const resetDialogDescription = computed(() => {
+  if (!itemToReset.value) return "";
+  return `Reset password untuk user "${itemToReset.value.username}"? Password lama tidak dapat dilihat. Password baru akan ditampilkan sekali dan sesi login user tersebut akan berakhir.`;
+});
+
 // ============================================================================
 // DELETE FUNCTIONS
 // ============================================================================
@@ -213,6 +229,106 @@ const confirmDelete = async () => {
 const cancelDelete = () => {
   isDeleteDialogOpen.value = false;
   itemToDelete.value = null;
+};
+
+// ============================================================================
+// RESET PASSWORD FUNCTIONS
+// ============================================================================
+/** Trigger reset password dialog */
+const openResetPassword = (item?: UserDefaultItem) => {
+  if (!canUpdate.value) {
+    toast.error("Akses Ditolak", {
+      description: "Anda tidak memiliki izin untuk mereset password User",
+    });
+    return;
+  }
+
+  const target = item ?? (selectedItem.value as UserDefaultItem | null);
+  if (!target) {
+    toast.error("Pilih item terlebih dahulu");
+    return;
+  }
+
+  itemToReset.value = target;
+  isResetDialogOpen.value = true;
+};
+
+const cancelResetPassword = () => {
+  if (isResetting.value) return;
+  isResetDialogOpen.value = false;
+  itemToReset.value = null;
+};
+
+/** Konfirmasi reset - minta password sementara baru dari API */
+const confirmResetPassword = async () => {
+  if (!itemToReset.value || isResetting.value) return;
+
+  isResetting.value = true;
+  try {
+    const response = await resetUserDefaultPassword(itemToReset.value.id);
+
+    if (response.status === "success") {
+      resetResult.value = {
+        username: response.data.user?.username || itemToReset.value.username,
+        password: response.data.temporary_password,
+      };
+      isResetDialogOpen.value = false;
+      isResetResultOpen.value = true;
+      toast.success(`Password "${resetResult.value.username}" berhasil direset`, {
+        description: "Catat password sementara yang ditampilkan",
+      });
+    } else {
+      toast.error("Gagal reset password", {
+        description:
+          (response as any).message || "Terjadi kesalahan saat reset password",
+      });
+    }
+  } catch (error) {
+    toast.error("Gagal reset password", {
+      description: error instanceof Error ? error.message : "Terjadi kesalahan",
+    });
+  } finally {
+    isResetting.value = false;
+  }
+};
+
+/** Tutup dialog hasil dan bersihkan password dari memori */
+const closeResetResult = () => {
+  isResetResultOpen.value = false;
+  resetResult.value = null;
+  itemToReset.value = null;
+};
+
+/** Salin password sementara ke clipboard */
+const copyResetPassword = async () => {
+  const password = resetResult.value?.password;
+  if (!password) return;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(password);
+    } else {
+      throw new Error("Clipboard API tidak tersedia");
+    }
+    toast.success("Password disalin");
+  } catch {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = password;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      toast.success("Password disalin");
+    } catch {
+      toast.error("Gagal menyalin", {
+        description: "Silakan salin password secara manual",
+      });
+    }
+  }
 };
 
 // ============================================================================
@@ -704,6 +820,16 @@ onUnmounted(() => {
                 Copy
               </Button>
               <Button
+                v-permission="{ menuId: currentMenuId, action: 'update' }"
+                size="sm"
+                variant="outline"
+                @click.stop="openResetPassword(item)"
+                class="h-8 w-8 p-0"
+                title="Reset Password"
+              >
+                <KeyRound class="h-3 w-3" />
+              </Button>
+              <Button
                 v-permission="{ menuId: currentMenuId, action: 'delete' }"
                 size="sm"
                 variant="destructive"
@@ -900,6 +1026,18 @@ onUnmounted(() => {
             :disabled="!isActive"
             @click="copyItem()"
           />
+          <Button
+            v-permission="{ menuId: currentMenuId, action: 'update' }"
+            variant="outline"
+            size="sm"
+            :disabled="!isActive"
+            @click="openResetPassword()"
+            class="gap-2 whitespace-nowrap"
+            title="Reset password user terpilih"
+          >
+            <KeyRound class="h-4 w-4" />
+            Reset Password
+          </Button>
         </div>
       </div>
     </div>
@@ -953,6 +1091,66 @@ onUnmounted(() => {
     @cancel="cancelDelete"
     @update:open="isDeleteDialogOpen = $event"
   />
+
+  <!-- ================================================================ -->
+  <!-- RESET PASSWORD CONFIRMATION DIALOG -->
+  <!-- ================================================================ -->
+  <GlobalDialog
+    :open="isResetDialogOpen"
+    title="Reset Password User"
+    :description="resetDialogDescription"
+    type="warning"
+    confirm-text="Reset Password"
+    cancel-text="Batal"
+    :is-loading="isResetting"
+    @confirm="confirmResetPassword"
+    @cancel="cancelResetPassword"
+    @update:open="isResetDialogOpen = $event"
+  />
+
+  <!-- ================================================================ -->
+  <!-- RESET PASSWORD RESULT DIALOG -->
+  <!-- ================================================================ -->
+  <GlobalDialog
+    :open="isResetResultOpen"
+    title="Password Baru"
+    description="Catat password ini sekarang. Password hanya ditampilkan sekali dan tidak dapat dilihat lagi."
+    type="success"
+    confirm-text="Selesai"
+    :show-cancel="false"
+    :persistent="true"
+    @confirm="closeResetResult"
+    @cancel="closeResetResult"
+    @update:open="isResetResultOpen = $event"
+  >
+    <div v-if="resetResult" class="space-y-3">
+      <div class="rounded-md border bg-muted/40 p-3">
+        <p class="text-xs text-muted-foreground">Username</p>
+        <p class="break-all font-mono text-sm font-semibold">
+          {{ resetResult.username }}
+        </p>
+      </div>
+      <div class="rounded-md border bg-muted/40 p-3">
+        <p class="text-xs text-muted-foreground">Password Sementara</p>
+        <p class="break-all font-mono text-lg font-bold tracking-wider">
+          {{ resetResult.password }}
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        class="w-full gap-2"
+        @click="copyResetPassword"
+      >
+        <Copy class="h-4 w-4" />
+        Copy Password
+      </Button>
+      <p class="text-xs text-amber-600 dark:text-amber-400">
+        Sesi login user ini sudah diakhiri. Minta pengguna login ulang dengan
+        password di atas, lalu segera ganti password setelah berhasil masuk.
+      </p>
+    </div>
+  </GlobalDialog>
 </template>
 
 <style scoped>
