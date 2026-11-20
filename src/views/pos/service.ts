@@ -1,5 +1,6 @@
 import { apiCall, apiPath } from "@/lib/api";
 import type {
+  ActiveShiftOrders,
   ApiResponse,
   CloseShiftPayload,
   CloseShiftResult,
@@ -34,6 +35,27 @@ export async function openShift(payload: OpenShiftPayload): Promise<PosShift> {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  return res.data;
+}
+
+// Riwayat transaksi shift aktif milik kasir yang sedang login.
+// Tidak mengirim shift_id dari client: scope ditentukan server dari user.
+export interface ActiveShiftOrdersOptions {
+  limit?: number;
+  cursor?: string | null;
+}
+
+export async function getActiveShiftOrders(
+  options: ActiveShiftOrdersOptions = {},
+): Promise<ActiveShiftOrders> {
+  const params = new URLSearchParams();
+  params.set("limit", String(options.limit ?? 20));
+  if (options.cursor) params.set("cursor", options.cursor);
+
+  const res = await apiCall<ApiResponse<ActiveShiftOrders>>(
+    `${POS_ENDPOINT("/shifts/active/orders")}?${params.toString()}`,
+    { method: "GET" },
+  );
   return res.data;
 }
 

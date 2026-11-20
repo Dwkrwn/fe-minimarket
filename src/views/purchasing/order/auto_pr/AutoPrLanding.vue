@@ -34,8 +34,8 @@
       <Card class="border-slate-200 dark:border-slate-800 shadow-xs">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Rekomendasi Pending</p>
-            <h3 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ rows.length }}</h3>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Siap Dipesan</p>
+            <h3 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ convertibleRows.length }}</h3>
             <p class="text-xs text-slate-500 mt-0.5">Usulan menunggu diproses</p>
           </div>
           <div class="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
@@ -100,10 +100,22 @@
           <Button variant="ghost" size="sm" class="text-xs text-slate-500" @click="searchQuery = ''">Reset</Button>
         </div>
         <p class="text-xs text-slate-500 mt-2">
-          Rekomendasi terbentuk otomatis saat stok menyentuh batas ROP (modul Inventory). Halaman ini tidak membuat usulan baru.
+          Rekomendasi terbentuk otomatis dari barang yang terdaftar di Batasan Pemesanan Barang (ROP)
+          dan berstatus selain "Aman". Barang yang sudah punya PO aktif tetap tampil, tetapi tidak bisa dikonversi.
         </p>
       </CardContent>
     </Card>
+
+    <div
+      v-if="waitingCount > 0"
+      class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+    >
+      <AlertTriangle class="w-4 h-4 mt-0.5 shrink-0" />
+      <p>
+        {{ waitingCount }} barang berstatus non-Aman tidak dapat dikonversi karena masih memiliki PO aktif.
+        Selesaikan atau batalkan PO tersebut terlebih dahulu.
+      </p>
+    </div>
 
     <Card class="border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
       <div class="overflow-x-auto">
@@ -114,7 +126,7 @@
                 <input
                   type="checkbox"
                   :checked="allSelected"
-                  :disabled="filteredRows.length === 0"
+                  :disabled="selectableFilteredRows.length === 0"
                   class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                   @change="toggleAll"
                 />
@@ -138,68 +150,98 @@
                 <Lightbulb class="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
                 <p class="font-medium text-slate-700 dark:text-slate-300">Tidak ada rekomendasi belanja</p>
                 <p class="text-xs text-slate-400 mt-1">
-                  Rekomendasi muncul saat ada barang yang stoknya menyentuh batas ROP.
+                  Rekomendasi muncul saat barang yang terdaftar di Batasan Pemesanan Barang (ROP)
+                  berstatus Perlu Restock atau Mendekati ROP dan Auto-PR-nya aktif.
                 </p>
               </td>
             </tr>
 
-            <tr
-              v-else
-              v-for="row in filteredRows"
-              :key="row.id"
-              class="hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition-colors"
-              :class="isSelected(row.id) ? 'bg-emerald-50/50 dark:bg-emerald-950/20' : ''"
-            >
-              <td class="px-4 py-3.5">
-                <input
-                  type="checkbox"
-                  :checked="isSelected(row.id)"
-                  class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                  @change="toggleRow(row.id)"
-                />
-              </td>
-              <td class="px-4 py-3.5">
-                <div class="font-medium text-slate-900 dark:text-white">{{ row.nama_barang }}</div>
-                <div class="flex items-center gap-2 mt-1">
-                  <span class="font-mono text-xs text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                    {{ row.no_pr }}
-                  </span>
-                  <span class="font-mono text-xs text-slate-400">{{ row.barcode }}</span>
-                </div>
-              </td>
-              <td class="px-4 py-3.5 text-center">
-                <span :class="['font-semibold', row.peringatan_merah ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200']">
-                  {{ formatNumber(row.stok_saat_ini_pcs) }}
-                </span>
-                <span class="text-xs text-slate-400"> / {{ formatNumber(row.rop_threshold_pcs) }} Pcs</span>
-                <Badge
-                  v-if="row.peringatan_merah"
-                  variant="outline"
-                  class="ml-1 bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 text-[10px]"
+            <template v-else>
+              <template v-for="(row, index) in filteredRows" :key="row.id">
+                <tr v-if="index === firstWaitingIndex" class="bg-amber-50/60 dark:bg-amber-950/20">
+                  <td colspan="6" class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                    Sudah ada PO aktif &mdash; tidak dapat dikonversi
+                  </td>
+                </tr>
+                <tr
+                  class="transition-colors"
+                  :class="[
+                    row.can_convert ? 'hover:bg-slate-50/70 dark:hover:bg-slate-900/40' : 'opacity-80',
+                    isSelected(row.id) ? 'bg-emerald-50/50 dark:bg-emerald-950/20' : '',
+                  ]"
                 >
-                  Kritis
-                </Badge>
-              </td>
-              <td class="px-4 py-3.5 text-center">
-                <div class="font-semibold">{{ formatNumber(row.qty_saran_beli) }} {{ row.satuan_beli }}</div>
-                <div class="text-xs text-slate-500">= {{ formatNumber(row.qty_saran_pcs) }} Pcs</div>
-              </td>
-              <td class="px-4 py-3.5">
-                <template v-if="row.supplier_rekomendasi">
-                  <div>{{ row.supplier_rekomendasi.nama_supplier }}</div>
-                  <div class="text-xs text-slate-500">
-                    Rp {{ formatNumber(row.supplier_rekomendasi.harga_modal_pcs) }} / Pcs
-                    <span v-if="row.supplier_rekomendasi.term_of_payment">
-                      &middot; TOP {{ row.supplier_rekomendasi.term_of_payment }} hari
-                    </span>
-                  </div>
-                </template>
-                <span v-else class="text-xs text-amber-600 dark:text-amber-400">Belum ada katalog harga</span>
-              </td>
-              <td class="px-4 py-3.5 text-right font-mono font-semibold text-slate-900 dark:text-white">
-                Rp {{ formatNumber(row.estimasi_biaya) }}
-              </td>
-            </tr>
+                  <td class="px-4 py-3.5">
+                    <input
+                      type="checkbox"
+                      :checked="isSelected(row.id)"
+                      :disabled="!row.can_convert"
+                      :title="row.can_convert ? 'Pilih untuk dikonversi' : 'Barang masih memiliki PO aktif'"
+                      class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      @change="toggleRow(row)"
+                    />
+                  </td>
+                  <td class="px-4 py-3.5">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-medium text-slate-900 dark:text-white">{{ row.nama_barang }}</span>
+                      <Badge
+                        v-if="row.has_active_po"
+                        variant="outline"
+                        class="bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/30 text-[10px]"
+                      >
+                        Sudah ada PO{{ row.active_po?.no_po ? ` · ${row.active_po.no_po}` : "" }}
+                      </Badge>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="font-mono text-xs text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                        {{ row.no_pr }}
+                      </span>
+                      <span class="font-mono text-xs text-slate-400">{{ row.barcode }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <div>
+                      <span :class="['font-semibold', row.rop_status === 'RESTOCK' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200']">
+                        {{ formatNumber(row.stok_saat_ini_pcs) }}
+                      </span>
+                      <span class="text-xs text-slate-400"> / {{ formatNumber(row.rop_threshold_pcs) }} Pcs</span>
+                    </div>
+                    <Badge
+                      v-if="row.rop_status === 'RESTOCK'"
+                      variant="outline"
+                      class="mt-1 bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 text-[10px]"
+                    >
+                      Perlu Restock
+                    </Badge>
+                    <Badge
+                      v-else-if="row.rop_status === 'WARNING'"
+                      variant="outline"
+                      class="mt-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10px]"
+                    >
+                      Mendekati ROP
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <div class="font-semibold">{{ formatNumber(row.qty_saran_beli) }} {{ row.satuan_beli }}</div>
+                    <div class="text-xs text-slate-500">= {{ formatNumber(row.qty_saran_pcs) }} Pcs</div>
+                  </td>
+                  <td class="px-4 py-3.5">
+                    <template v-if="row.supplier_rekomendasi">
+                      <div>{{ row.supplier_rekomendasi.nama_supplier }}</div>
+                      <div class="text-xs text-slate-500">
+                        Rp {{ formatNumber(row.supplier_rekomendasi.harga_modal_pcs) }} / Pcs
+                        <span v-if="row.supplier_rekomendasi.term_of_payment">
+                          &middot; TOP {{ row.supplier_rekomendasi.term_of_payment }} hari
+                        </span>
+                      </div>
+                    </template>
+                    <span v-else class="text-xs text-amber-600 dark:text-amber-400">Belum ada katalog harga</span>
+                  </td>
+                  <td class="px-4 py-3.5 text-right font-mono font-semibold text-slate-900 dark:text-white">
+                    Rp {{ formatNumber(row.estimasi_biaya) }}
+                  </td>
+                </tr>
+              </template>
+            </template>
           </tbody>
           <tfoot v-if="filteredRows.length > 0" class="bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800">
             <tr>
@@ -291,7 +333,11 @@ const filteredRows = computed(() => {
   );
 });
 
-const criticalCount = computed(() => rows.value.filter((row) => row.peringatan_merah).length);
+const convertibleRows = computed(() => rows.value.filter((row) => row.can_convert));
+const waitingCount = computed(() => rows.value.filter((row) => !row.can_convert).length);
+const selectableFilteredRows = computed(() => filteredRows.value.filter((row) => row.can_convert));
+const firstWaitingIndex = computed(() => filteredRows.value.findIndex((row) => !row.can_convert));
+const criticalCount = computed(() => rows.value.filter((row) => row.rop_status === "RESTOCK").length);
 const totalEstimatedCost = computed(() =>
   rows.value.reduce((acc, row) => acc + Number(row.estimasi_biaya || 0), 0),
 );
@@ -300,7 +346,9 @@ const selectedTotalCost = computed(() =>
   selectedRows.value.reduce((acc, row) => acc + Number(row.estimasi_biaya || 0), 0),
 );
 const allSelected = computed(
-  () => filteredRows.value.length > 0 && filteredRows.value.every((row) => selectedIds.value.includes(row.id)),
+  () =>
+    selectableFilteredRows.value.length > 0 &&
+    selectableFilteredRows.value.every((row) => selectedIds.value.includes(row.id)),
 );
 const filteredTotalCost = computed(() =>
   filteredRows.value.reduce((acc, row) => acc + Number(row.estimasi_biaya || 0), 0),
@@ -314,21 +362,24 @@ function isSelected(id: string) {
   return selectedIds.value.includes(id);
 }
 
-function toggleRow(id: string) {
-  selectedIds.value = isSelected(id)
-    ? selectedIds.value.filter((value) => value !== id)
-    : [...selectedIds.value, id];
+function toggleRow(row: AutoPrRow) {
+  if (!row.can_convert) return;
+  selectedIds.value = isSelected(row.id)
+    ? selectedIds.value.filter((value) => value !== row.id)
+    : [...selectedIds.value, row.id];
 }
 
 function toggleAll() {
-  selectedIds.value = allSelected.value ? [] : filteredRows.value.map((row) => row.id);
+  selectedIds.value = allSelected.value ? [] : selectableFilteredRows.value.map((row) => row.id);
 }
 
 async function load() {
   loading.value = true;
   try {
     rows.value = await getAutoPrs("PENDING");
-    selectedIds.value = selectedIds.value.filter((id) => rows.value.some((row) => row.id === id));
+    selectedIds.value = selectedIds.value.filter((id) =>
+      rows.value.some((row) => row.id === id && row.can_convert),
+    );
   } catch (error: any) {
     console.error("Gagal memuat rekomendasi belanja:", error);
     toast.error(error.message || "Gagal memuat rekomendasi belanja");

@@ -6,7 +6,10 @@ import {
   ArrowRight,
   Banknote,
   Barcode,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
+  History,
   LogOut,
   Minus,
   PackageOpen,
@@ -37,11 +40,14 @@ import {
   checkout,
   findRakItemByBarcode,
   getActiveShift,
+  getActiveShiftOrders,
   getRakCatalog,
 } from "../service";
 import type {
+  ActiveShiftOrders,
   CartItem,
   PaymentMethod,
+  PosHistoryOrder,
   PosOrder,
   PosShift,
   RakStockRow,
@@ -65,6 +71,16 @@ const submitting = ref(false);
 
 const receipt = ref<PosOrder | null>(null);
 const receiptOpen = ref(false);
+/** Struk yang sedang dicetak (checkout ATAU cetak ulang dari riwayat). */
+const printableReceipt = ref<PosOrder | null>(null);
+
+// Riwayat transaksi shift aktif — dibuka dari header mesin kasir.
+const historyOpen = ref(false);
+const historyLoading = ref(false);
+const historyLoadingMore = ref(false);
+const historyQuery = ref("");
+const history = ref<ActiveShiftOrders | null>(null);
+const historyExpanded = ref<string[]>([]);
 
 const METODE: Array<{
   value: PaymentMethod;
@@ -103,6 +119,22 @@ const catalogFiltered = computed(() => {
       )
     : catalog.value;
   return rows.slice(0, 60);
+});
+
+const historyFiltered = computed(() => {
+  const keyword = historyQuery.value.trim().toLowerCase();
+  const orders = history.value?.orders || [];
+  if (!keyword) return orders;
+
+  return orders.filter(
+    (order) =>
+      String(order.no_struk).toLowerCase().includes(keyword) ||
+      order.details.some(
+        (detail) =>
+          String(detail.item?.nama_barang || "").toLowerCase().includes(keyword) ||
+          String(detail.item?.barcode || "").toLowerCase().includes(keyword),
+      ),
+  );
 });
 
 const totalItem = computed(() =>
@@ -292,6 +324,7 @@ async function submitCheckout() {
     receiptOpen.value = true;
     resetCart();
     await loadData();
+    if (historyOpen.value) await loadHistory(true);
   } catch (error) {
     toast.error(error instanceof Error ? error.message : "Checkout gagal");
   } finally {
@@ -299,8 +332,59 @@ async function submitCheckout() {
   }
 }
 
-function printReceipt() {
+async function printReceipt(order?: PosOrder | null) {
+  if (!order) return;
+  printableReceipt.value = order;
+  await nextTick();
   window.print();
+}
+
+async function loadHistory(reset = true) {
+  if (reset) historyExpanded.value = [];
+
+  const loadingFlag = reset ? historyLoading : historyLoadingMore;
+  loadingFlag.value = true;
+  try {
+    const data = await getActiveShiftOrders({
+      limit: 20,
+      cursor: reset ? null : (history.value?.next_cursor ?? null),
+    });
+    if (!reset && history.value) {
+      history.value = {
+        ...data,
+        orders: [...history.value.orders, ...data.orders],
+      };
+    } else {
+      history.value = data;
+    }
+  } catch (error) {
+    toast.error(
+      error instanceof Error ? error.message : "Gagal memuat riwayat transaksi",
+    );
+  } finally {
+    loadingFlag.value = false;
+  }
+}
+
+async function openHistory() {
+  historyOpen.value = true;
+  historyQuery.value = "";
+  await loadHistory(true);
+}
+
+async function loadMoreHistory() {
+  if (!history.value?.has_more || historyLoadingMore.value) return;
+  await loadHistory(false);
+}
+
+function toggleHistoryDetail(order: PosHistoryOrder) {
+  historyExpanded.value = historyExpanded.value.includes(order.id)
+    ? historyExpanded.value.filter((id) => id !== order.id)
+    : [...historyExpanded.value, order.id];
+}
+
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleString("id-ID") : "-";
 }
 
 function goToOpenShift() {
@@ -365,6 +449,16 @@ onMounted(loadData);
             Shift belum dibuka
           </Badge>
         </div>
+
+        <Button
+          variant="outline"
+          class="h-10 gap-2 rounded-xl"
+          title="Lihat riwayat transaksi shift ini"
+          @click="openHistory"
+        >
+          <History class="h-4 w-4" />
+          <span class="hidden sm:inline">Riwayat</span>
+        </Button>
 
         <Button
           variant="outline"
@@ -732,6 +826,152 @@ onMounted(loadData);
       </aside>
     </main>
 
+    <!-- Riwayat transaksi pada shift yang masih aktif -->
+    <Dialog v-model:open="historyOpen">
+      <DialogContent class="max-h-[88vh] overflow-hidden sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2">
+            <History class="h-5 w-5 text-primary" />
+            Riwayat Transaksi
+          </DialogTitle>
+          <DialogDescription>
+            Transaksi pada shift {{ history?.no_shift || shift?.no_shift || "-" }}.
+            Detail per struk bisa dilihat tanpa menutup shift.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="relative">
+          <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            v-model="historyQuery"
+            placeholder="Cari no. struk atau nama barang"
+            class="h-9 rounded-xl pl-9"
+          />
+        </div>
+
+        <div class="max-h-[52vh] space-y-2.5 overflow-y-auto pr-1">
+          <div
+            v-if="historyLoading"
+            class="rounded-2xl border border-border/60 bg-muted/30 p-6 text-center text-sm text-muted-foreground"
+          >
+            Memuat riwayat transaksi...
+          </div>
+
+          <div
+            v-else-if="!history?.orders?.length"
+            class="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-center"
+          >
+            <ReceiptText class="mx-auto h-7 w-7 text-muted-foreground/70" />
+            <p class="mt-2 text-sm font-medium">Belum ada transaksi pada shift ini</p>
+            <p v-if="!shift" class="mt-1 text-xs text-muted-foreground">
+              Buka shift terlebih dahulu untuk mulai transaksi.
+            </p>
+          </div>
+
+          <div
+            v-else-if="!historyFiltered.length"
+            class="rounded-2xl border border-border/60 bg-muted/30 p-6 text-center text-sm text-muted-foreground"
+          >
+            Tidak ada transaksi yang cocok dengan pencarian.
+          </div>
+
+          <div
+            v-for="order in historyFiltered"
+            :key="order.id"
+            class="rounded-2xl border border-border/60 bg-card/80 shadow-sm"
+          >
+            <div class="flex items-start gap-3 p-3">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-semibold">{{ order.no_struk }}</span>
+                  <Badge variant="secondary" class="rounded-full">
+                    {{ order.metode_bayar }}
+                  </Badge>
+                  <span class="text-[11px] text-muted-foreground">
+                    {{ formatDate(order.createdAt) }}
+                  </span>
+                </div>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  {{ order.item_count }} item · {{ order.status }}
+                </p>
+                <p
+                  v-if="order.catatan"
+                  class="mt-1 truncate text-xs italic text-muted-foreground"
+                >
+                  “{{ order.catatan }}”
+                </p>
+              </div>
+              <div class="shrink-0 text-right">
+                <p class="font-semibold text-emerald-600 dark:text-emerald-400">
+                  {{ rupiah(order.total_amount) }}
+                </p>
+                <button
+                  type="button"
+                  class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  @click="toggleHistoryDetail(order)"
+                >
+                  Detail
+                  <ChevronUp v-if="historyExpanded.includes(order.id)" class="h-3.5 w-3.5" />
+                  <ChevronDown v-else class="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-if="historyExpanded.includes(order.id)"
+              class="border-t border-border/60 bg-muted/20 p-3"
+            >
+              <ul class="space-y-1.5 text-sm">
+                <li
+                  v-for="detail in order.details"
+                  :key="detail.id"
+                  class="flex items-start justify-between gap-3"
+                >
+                  <span class="min-w-0">
+                    <span class="block truncate font-medium">
+                      {{ detail.item?.nama_barang || detail.item_id }}
+                    </span>
+                    <span class="text-[11px] text-muted-foreground">
+                      {{ detail.qty_pcs }} × {{ rupiah(detail.harga_satuan) }}
+                      <template v-if="Number(detail.diskon) > 0">
+                        · diskon {{ rupiah(detail.diskon) }}
+                      </template>
+                    </span>
+                  </span>
+                  <span class="shrink-0 font-medium">{{ rupiah(detail.subtotal) }}</span>
+                </li>
+              </ul>
+              <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs text-muted-foreground">
+                  Bayar {{ rupiah(order.bayar) }} · Kembali {{ rupiah(order.kembalian) }}
+                </p>
+                <Button variant="outline" size="sm" class="rounded-xl" @click="printReceipt(order)">
+                  <Printer class="h-4 w-4" />
+                  Cetak ulang
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter class="gap-2 sm:justify-between">
+          <Button
+            v-if="history?.has_more"
+            variant="outline"
+            class="rounded-xl"
+            :disabled="historyLoadingMore"
+            @click="loadMoreHistory"
+          >
+            {{ historyLoadingMore ? "Memuat..." : "Muat lebih banyak" }}
+          </Button>
+          <span v-else class="text-xs text-muted-foreground">
+            Semua transaksi shift ini sudah ditampilkan.
+          </span>
+          <Button class="rounded-xl" @click="historyOpen = false">Tutup</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <!-- Struk -->
     <Dialog v-model:open="receiptOpen">
       <DialogContent class="sm:max-w-md">
@@ -788,7 +1028,7 @@ onMounted(loadData);
         </div>
 
         <DialogFooter class="gap-2 sm:justify-between">
-          <Button variant="outline" class="rounded-xl" @click="printReceipt">
+          <Button variant="outline" class="rounded-xl" @click="printReceipt(receipt)">
             <Printer class="h-4 w-4" />
             Cetak Struk
           </Button>
@@ -799,19 +1039,19 @@ onMounted(loadData);
       </DialogContent>
     </Dialog>
 
-    <!-- Area cetak (hanya tampil saat print) -->
-    <div v-if="receipt" id="pos-receipt-print" class="hidden print:block">
+    <!-- Area cetak (hanya tampil saat print; dipakai checkout & cetak ulang) -->
+    <div v-if="printableReceipt" id="pos-receipt-print" class="hidden print:block">
       <div style="max-width: 320px; margin: 0 auto; font-family: monospace; color: #111">
         <h2 style="text-align: center; margin: 0 0 4px">MINI MARKET</h2>
         <p style="text-align: center; margin: 0 0 8px; font-size: 12px">
-          Struk {{ receipt.no_struk }}
+          Struk {{ printableReceipt.no_struk }}
         </p>
         <p style="font-size: 11px; margin: 0 0 8px">
-          {{ new Date(receipt.createdAt).toLocaleString("id-ID") }}
+          {{ new Date(printableReceipt.createdAt).toLocaleString("id-ID") }}
         </p>
         <hr />
         <div
-          v-for="detail in receipt.details"
+          v-for="detail in printableReceipt.details"
           :key="detail.id"
           style="font-size: 12px; margin: 6px 0"
         >
@@ -824,15 +1064,15 @@ onMounted(loadData);
         <hr />
         <div style="display: flex; justify-content: space-between; font-size: 12px">
           <span>Total</span>
-          <strong>{{ rupiah(receipt.total_amount) }}</strong>
+          <strong>{{ rupiah(printableReceipt.total_amount) }}</strong>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 12px">
-          <span>{{ receipt.metode_bayar }}</span>
-          <span>{{ rupiah(receipt.bayar) }}</span>
+          <span>{{ printableReceipt.metode_bayar }}</span>
+          <span>{{ rupiah(printableReceipt.bayar) }}</span>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 12px">
           <span>Kembali</span>
-          <span>{{ rupiah(receipt.kembalian) }}</span>
+          <span>{{ rupiah(printableReceipt.kembalian) }}</span>
         </div>
         <p style="text-align: center; font-size: 11px; margin-top: 12px">
           Terima kasih telah berbelanja

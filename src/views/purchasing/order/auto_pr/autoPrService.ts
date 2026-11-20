@@ -10,6 +10,15 @@ export interface AutoPrSupplier {
   harga_modal_pcs?: number | string;
 }
 
+export interface AutoPrActivePo {
+  id: string;
+  no_po: string;
+  status: string;
+  createdAt?: string | null;
+}
+
+export type AutoPrRopStatus = "RESTOCK" | "WARNING" | "SAFE";
+
 export interface AutoPrRow {
   id: string;
   no_pr: string;
@@ -25,8 +34,12 @@ export interface AutoPrRow {
   supplier_rekomendasi: AutoPrSupplier | null;
   estimasi_biaya: number | string;
   status: string;
+  rop_status: AutoPrRopStatus;
   peringatan_merah: boolean;
-  createdAt: string;
+  can_convert: boolean;
+  has_active_po: boolean;
+  active_po: AutoPrActivePo | null;
+  createdAt: string | null;
 }
 
 export interface ConvertAutoPrPayload {

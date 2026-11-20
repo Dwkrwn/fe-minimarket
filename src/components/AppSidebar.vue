@@ -46,9 +46,9 @@ const { refreshTrigger, resetRefresh } = useSidebarRefresh();
 /** Nama modul dalam bahasa yang mudah dipahami */
 const MODULE_LABELS: Record<string, string> = {
   SETUP: "Pengaturan",
-  PURCHASING: "Pembelian",
-  INVENTORY: "Persediaan",
-  POS: "Transaksi",
+  PURCHASING: "Purchasing",
+  INVENTORY: "Inventory",
+  POS: "Transaksi (POS)",
   MARKETING: "Pemasaran",
   SALES: "Penjualan",
   FINANCE: "Keuangan",
@@ -61,7 +61,7 @@ const MODULE_LABELS: Record<string, string> = {
 
 /** Nama kelompok menu dalam bahasa yang mudah dipahami */
 const SUB_MODULE_LABELS: Record<string, string> = {
-  MASTER: "Data Induk",
+  MASTER: "Master",
   PEMESANAN: "Pemesanan",
   PENERIMAAN: "Penerimaan Barang",
   TAGIHAN: "Tagihan",
@@ -78,11 +78,15 @@ function toSentenceCase(value: string): string {
 }
 
 function moduleLabel(name: string): string {
-  return MODULE_LABELS[String(name || "").toUpperCase()] || toSentenceCase(name);
+  return (
+    MODULE_LABELS[String(name || "").toUpperCase()] || toSentenceCase(name)
+  );
 }
 
 function subModuleLabel(name: string): string {
-  return SUB_MODULE_LABELS[String(name || "").toUpperCase()] || toSentenceCase(name);
+  return (
+    SUB_MODULE_LABELS[String(name || "").toUpperCase()] || toSentenceCase(name)
+  );
 }
 
 /** Get appropriate icon for each module */
@@ -117,7 +121,18 @@ const getModuleIcon = (moduleName: string): string => {
 
 const loadMenus = async (showToast = false) => {
   try {
-    dynamicMenus.value = [...(authStore.user?.menus || [])].map(menu => ({ ...menu, desc: '', icon: menu.icon || '', modul: menu.modul || '', sub_modul: menu.sub_modul || '', is_active: true, createdAt: '', updatedAt: '' })).sort((a,b) => a.seq.localeCompare(b.seq, undefined, {numeric:true}));
+    dynamicMenus.value = [...(authStore.user?.menus || [])]
+      .map((menu) => ({
+        ...menu,
+        desc: "",
+        icon: menu.icon || "",
+        modul: menu.modul || "",
+        sub_modul: menu.sub_modul || "",
+        is_active: true,
+        createdAt: "",
+        updatedAt: "",
+      }))
+      .sort((a, b) => a.seq.localeCompare(b.seq, undefined, { numeric: true }));
 
     if (showToast || (!loading.value && refreshing.value)) {
       toast.success("Menu berhasil diperbarui", {
@@ -140,11 +155,19 @@ const refreshSession = async () => {
     // Throttled (5 min TTL) so focus/interval does not hammer /auth/me.
     const refreshed = await authStore.refreshUserDataIfStale();
     if (refreshed) await loadMenus();
-  } catch { /* API layer handles expired sessions. */ }
+  } catch {
+    /* API layer handles expired sessions. */
+  }
 };
 let sessionInterval: ReturnType<typeof setInterval>;
-onMounted(() => { window.addEventListener('focus', refreshSession); sessionInterval = setInterval(refreshSession, 300000); });
-onUnmounted(() => { window.removeEventListener('focus', refreshSession); clearInterval(sessionInterval); });
+onMounted(() => {
+  window.addEventListener("focus", refreshSession);
+  sessionInterval = setInterval(refreshSession, 300000);
+});
+onUnmounted(() => {
+  window.removeEventListener("focus", refreshSession);
+  clearInterval(sessionInterval);
+});
 
 const handleRefreshMenu = async () => {
   refreshing.value = true;
@@ -521,8 +544,7 @@ const data = computed(() => {
             url: item.url,
             icon: item.icon,
             isActive:
-              route.path === item.url ||
-              route.path.startsWith(item.url + "/"),
+              route.path === item.url || route.path.startsWith(item.url + "/"),
             badge:
               item.url === "/notifikasi" && notificationCount.value > 0
                 ? notificationCount.value
@@ -566,7 +588,9 @@ const data = computed(() => {
 
 <template>
   <Sidebar v-bind="props">
-    <SidebarHeader class="border-b border-sidebar-border/70 bg-sidebar-header px-2 py-2.5 text-sidebar-header-foreground">
+    <SidebarHeader
+      class="border-b border-sidebar-border/70 bg-sidebar-header px-2 py-2.5 text-sidebar-header-foreground"
+    >
       <TeamSwitcher
         @selectRespo="
           (respoId) => {

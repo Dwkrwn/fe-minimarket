@@ -59,6 +59,24 @@ export interface PosOrder {
   details: PosOrderDetail[];
 }
 
+/**
+ * Satu transaksi pada riwayat shift aktif. Bentuknya sengaja sama dengan
+ * PosOrder agar bisa langsung dicetak ulang tanpa mapping tambahan.
+ */
+export interface PosHistoryOrder extends PosOrder {
+  item_count: number;
+}
+
+/**
+ * GET /v1/pos/shifts/active/orders — sengaja TANPA agregat kas (blind closing).
+ */
+export interface ActiveShiftOrders {
+  no_shift: string | null;
+  orders: PosHistoryOrder[];
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
 export type RekonsiliasiStatus = "SEIMBANG" | "LEBIH_KAS" | "KURANG_KAS";
 
 export interface CloseShiftResult extends PosShift {
