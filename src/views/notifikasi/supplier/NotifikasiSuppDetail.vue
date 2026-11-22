@@ -50,6 +50,7 @@ import {
 } from "./service.supplier";
 import { getSupplierDetail } from "@/views/purchasing/master/suppliers/supplierService";
 import { useAuthStore } from "@/stores/auth";
+import { finalizeNotificationAction } from "@/lib/notificationState";
 import FieldX from "@/components/field/FieldX.vue";
 
 const authStore = useAuthStore();
@@ -167,6 +168,7 @@ const handleApproval = async (status: "APPROVED" | "REVISI") => {
       toast.success("Supplier sent for revision");
     }
 
+    finalizeNotificationAction(notification.value.id);
     router.push("/notifikasi");
   } catch (error: any) {
     toast.error(
@@ -217,6 +219,7 @@ const handleReject = async () => {
       approvalCatatan.value,
     );
 
+    finalizeNotificationAction(notification.value.id);
     toast.success("Supplier rejected successfully");
     router.push("/notifikasi");
   } catch (error: any) {

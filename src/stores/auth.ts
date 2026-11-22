@@ -122,6 +122,14 @@ export const useAuthStore = defineStore('auth', () => {
  const hasAccess = (menuId: string) => hasPermission(menuId, 'read')
  const getMenuPermissions = () => (user.value?.menus || []).map(menu => ({ m_menu_id: menu.id, m_menu: menu, ...user.value?.permissions[menu.id] }))
  const saveApprovalList = (list: ApprovalData[]) => localStorage.setItem('approval_list', JSON.stringify(list))
- const getApprovalList = (): ApprovalData[] => []
+ const getApprovalList = (): ApprovalData[] => {
+    try {
+      const stored = localStorage.getItem('approval_list')
+      const parsed = stored ? JSON.parse(stored) : []
+      return Array.isArray(parsed) ? (parsed as ApprovalData[]) : []
+    } catch {
+      return []
+    }
+  }
  return { user, token, currentUser, isAuthenticated, isSuperAdmin, isManager, tipeUser, userDetails, respos, login, logout, logoutWithServer, handleTokenExpired, checkAuth, refreshUserData, refreshUserDataIfStale, initializeSelectRespo, hasPermission, hasAccess, getMenuPermissions, saveApprovalList, getApprovalList }
 })

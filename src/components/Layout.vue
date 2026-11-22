@@ -33,12 +33,12 @@ const route = useRoute();
 const router = useRouter();
 
 const pageTitleMap: Record<string, string> = {
-  Dashboard: "Dasbor",
+  Dashboard: "Dashboard",
   Documentation: "Panduan",
   Login: "Masuk",
 };
 const pageTitle = computed(
-  () => pageTitleMap[route.meta.title as string] || (route.meta.title as string) || "Dasbor",
+  () => pageTitleMap[route.meta.title as string] || (route.meta.title as string) || "Dashboard",
 );
 
 // Layar kasir tampil fullscreen: sidebar & header disembunyikan agar fokus.

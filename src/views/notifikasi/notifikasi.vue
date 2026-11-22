@@ -9,6 +9,7 @@ import {
   ListChecks,
   RefreshCw,
   ShoppingCart,
+  TriangleAlert,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -27,19 +28,33 @@ import SupplierNotificationList from "./supplier/NotificationList.vue";
 import StockOpnameNotificationList from "./stock_opname/NotificationList.vue";
 import StockGudangLockNotificationList from "./stock_opname/StockGudangLockNotificationList.vue";
 import OutstandingNotificationList from "./outstanding/OutstandingNotificationList.vue";
+import StockAlertNotificationList from "./stock/StockAlertNotificationList.vue";
 
 // Import services
 import {
-  getUnifiedNotifications,
+  getNotificationSnapshot,
   markUnifiedNotificationAsRead,
   type NotificationItem,
 } from "./service";
+import { useAuthStore } from "@/stores/auth";
+import {
+  canMarkNotificationAsRead,
+  countUnreadNotifications,
+  isNotificationRead as checkNotificationRead,
+  loadDismissedStockAlertIds,
+  loadReadNotificationIds,
+  saveDismissedStockAlertIds,
+  saveNotificationLocalState,
+  saveReadNotificationIds,
+} from "@/lib/notificationState";
 
-const STORAGE_KEY = "bb_read_notifications";
+const authStore = useAuthStore();
 
-const canMarkNotificationAsRead = (notif: any) =>
-  notif?.notification_category !== "outstanding" &&
-  notif?.info_type !== "stock_opname_lock";
+const canViewStockAlerts = computed(
+  () =>
+    authStore.isManager ||
+    authStore.user?.role.system_key === "GUDANG",
+);
 
 const markAsReadByType = (notif: any): Promise<any> => {
   if (!canMarkNotificationAsRead(notif)) {
@@ -52,7 +67,7 @@ const router = useRouter();
 const route = useRoute();
 const loading = ref(true);
 const refreshing = ref(false);
-type NotificationTab = "all" | "approval" | "outstanding" | "info";
+type NotificationTab = "all" | "approval" | "outstanding" | "info" | "stock";
 
 // Notification data
 const activeNotificationType = ref<NotificationTab>("all");
@@ -61,7 +76,12 @@ const notificationCounts = ref({
   approval: 0,
   outstanding: 0,
   info: 0,
+  stock: 0,
 });
+const stockNotifications = ref<any[]>([]);
+const stockMeta = ref<any>(null);
+const documentError = ref<string | null>(null);
+const dismissedStockAlertIds = ref<Set<string>>(new Set());
 const notifications = ref<NotificationItem[]>([]);
 const revisiNotifications = ref<NotificationItem[]>([]);
 const pendingApprovalNotifications = ref<NotificationItem[]>([]);
@@ -89,62 +109,82 @@ const stockOpnamePendingApprovalNotifications = ref<any[]>([]);
 const page = ref(1);
 const limit = ref(10);
 const openAccordions = ref<string[]>([]);
-const readNotificationIds = ref<Set<string>>(new Set());
+const readNotificationIds = ref<Set<string>>(loadReadNotificationIds());
 
-const notificationTabs = [
-  {
-    value: "all" as const,
-    label: "All",
-    icon: ListChecks,
-    description: "Semua prioritas aktif",
-  },
-  {
-    value: "approval" as const,
-    label: "Approval",
-    icon: Clock3,
-    description: "Butuh persetujuan",
-  },
-  {
-    value: "outstanding" as const,
-    label: "Outstanding",
-    icon: ShoppingCart,
-    description: "PR dan PO tersisa",
-  },
-  {
-    value: "info" as const,
-    label: "Info",
-    icon: Info,
-    description: "Revisi dan lock",
-  },
-];
+const notificationTabs = computed<
+  Array<{
+    value: NotificationTab;
+    label: string;
+    icon: any;
+    description: string;
+  }>
+>(() => {
+  const tabs: Array<{
+    value: NotificationTab;
+    label: string;
+    icon: any;
+    description: string;
+  }> = [
+    {
+      value: "all" as const,
+      label: "All",
+      icon: ListChecks,
+      description: "Semua prioritas aktif",
+    },
+    {
+      value: "approval" as const,
+      label: "Approval",
+      icon: Clock3,
+      description: "Butuh persetujuan",
+    },
+    {
+      value: "outstanding" as const,
+      label: "Outstanding",
+      icon: ShoppingCart,
+      description: "PR dan PO tersisa",
+    },
+    {
+      value: "info" as const,
+      label: "Info",
+      icon: Info,
+      description: "Revisi dan lock",
+    },
+  ];
 
-// localStorage functions
-const loadReadNotifications = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored)
-      readNotificationIds.value = new Set(JSON.parse(stored) as string[]);
-  } catch (e) {
-    console.error("Failed to load read notifications:", e);
+  if (canViewStockAlerts.value) {
+    tabs.push({
+      value: "stock" as const,
+      label: "Stok",
+      icon: TriangleAlert,
+      description: "Minimum/ROP dan expired",
+    });
   }
+
+  return tabs;
+});
+
+// localStorage helpers (sumber tunggal ada di @/lib/notificationState)
+const loadReadNotifications = () => {
+  readNotificationIds.value = loadReadNotificationIds();
 };
 
 const saveReadNotifications = () => {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(Array.from(readNotificationIds.value)),
-    );
-    window.dispatchEvent(new CustomEvent("notificationRead"));
-  } catch (e) {
-    console.error("Failed to save read notifications:", e);
-  }
+  saveReadNotificationIds(readNotificationIds.value);
+};
+
+const loadDismissedStockAlerts = (activeIds?: Set<string>) => {
+  dismissedStockAlertIds.value = loadDismissedStockAlertIds(activeIds);
+};
+
+const saveDismissedStockAlerts = () => {
+  saveDismissedStockAlertIds(dismissedStockAlertIds.value);
 };
 
 const isNotificationRead = (notif: any) =>
-  !canMarkNotificationAsRead(notif) ||
-  notif.status ||
-  readNotificationIds.value.has(notif.id);
+  checkNotificationRead(notif, readNotificationIds.value);
+
+const isStockAlertDismissed = (notif: any) =>
+  dismissedStockAlertIds.value.has(String(notif?.id));
 
 // Computed - separate by type
 const purchaseRequestNotifications = computed(() =>
@@ -254,34 +294,46 @@ const stockOpnamePendingUnreadCount = computed(
       (n) => !isNotificationRead(n),
     ).length,
 );
+const stockUnreadCount = computed(
+  () =>
+    stockNotifications.value.filter((n) => !isStockAlertDismissed(n)).length,
+);
 
-const totalUnreadCount = computed<number>(() => {
-  return (
-    prUnreadCount.value +
-    revisiUnreadCount.value +
-    pendingApprovalUnreadCount.value +
-    outstandingUnreadCount.value +
-    poUnreadCount.value +
-    poRevisiUnreadCount.value +
-    poPendingUnreadCount.value +
-    piUnreadCount.value +
-    piRevisiUnreadCount.value +
-    piPendingUnreadCount.value +
-    preturnUnreadCount.value +
-    preturnRevisiUnreadCount.value +
-    preturnPendingUnreadCount.value +
-    pgUnreadCount.value +
-    pgRevisiUnreadCount.value +
-    pgPendingUnreadCount.value +
-    supplierUnreadCount.value +
-    supplierRevisiUnreadCount.value +
-    supplierPendingUnreadCount.value +
-    stockGudangLockUnreadCount.value +
-    stockOpnameUnreadCount.value +
-    stockOpnameRevisiUnreadCount.value +
-    stockOpnamePendingUnreadCount.value
-  );
-});
+const allNotificationRows = computed<any[]>(() => [
+  ...notifications.value,
+  ...revisiNotifications.value,
+  ...pendingApprovalNotifications.value,
+  ...outstandingNotifications.value,
+  ...poNotifications.value,
+  ...poRevisiNotifications.value,
+  ...poPendingApprovalNotifications.value,
+  ...piNotifications.value,
+  ...piRevisiNotifications.value,
+  ...piPendingApprovalNotifications.value,
+  ...preturnNotifications.value,
+  ...preturnRevisiNotifications.value,
+  ...preturnPendingApprovalNotifications.value,
+  ...pgNotifications.value,
+  ...pgRevisiNotifications.value,
+  ...pgPendingApprovalNotifications.value,
+  ...supplierNotifications.value,
+  ...supplierRevisiNotifications.value,
+  ...supplierPendingApprovalNotifications.value,
+  ...stockGudangLockNotifications.value,
+  ...stockOpnameNotifications.value,
+  ...stockOpnameRevisiNotifications.value,
+  ...stockOpnamePendingApprovalNotifications.value,
+  ...stockNotifications.value,
+]);
+
+// Badge sidebar memakai helper yang sama dengan halaman ini.
+const totalUnreadCount = computed<number>(() =>
+  countUnreadNotifications(
+    allNotificationRows.value,
+    readNotificationIds.value,
+    dismissedStockAlertIds.value,
+  ),
+);
 
 // Check if has any notifications
 const hasAnyNotifications = computed<boolean>(() => {
@@ -308,7 +360,8 @@ const hasAnyNotifications = computed<boolean>(() => {
     stockGudangLockNotifications.value.length > 0 ||
     stockOpnameNotifications.value.length > 0 ||
     stockOpnameRevisiNotifications.value.length > 0 ||
-    stockOpnamePendingApprovalNotifications.value.length > 0
+    stockOpnamePendingApprovalNotifications.value.length > 0 ||
+    stockNotifications.value.length > 0
   );
 });
 
@@ -316,11 +369,10 @@ const fetchNotifications = async (showLoading = true) => {
   try {
     if (showLoading) loading.value = true;
     else refreshing.value = true;
-    const unifiedResponse = await getUnifiedNotifications(
+    const unifiedResponse = await getNotificationSnapshot(
       page.value,
       100,
       !showLoading,
-      activeNotificationType.value,
     );
     const approvalRows = unifiedResponse.data?.approval || [];
     const outstandingRows = unifiedResponse.data?.outstanding || [];
@@ -347,9 +399,11 @@ const fetchNotifications = async (showLoading = true) => {
               approval: unifiedResponse.counts.approval || 0,
               outstanding: unifiedResponse.counts.outstanding || 0,
               info: unifiedResponse.counts.info || 0,
+              stock: unifiedResponse.counts.stock || 0,
             }
           : {
               ...notificationCounts.value,
+              all: unifiedResponse.counts.all || 0,
               [activeNotificationType.value]:
                 unifiedResponse.counts[activeNotificationType.value] || 0,
             };
@@ -358,17 +412,38 @@ const fetchNotifications = async (showLoading = true) => {
     const byType = (rows: any[], type: string) =>
       rows.filter((row) => row.notification_type === type);
 
-    if (unifiedResponse.active_ids?.length) {
-      const validIds = new Set(
-        (unifiedResponse.active_ids || []).map((id) => String(id)),
-      );
-      const cleanedIds = [...readNotificationIds.value].filter((id) =>
-        validIds.has(id),
-      );
-      if (cleanedIds.length !== readNotificationIds.value.size) {
-        readNotificationIds.value = new Set(cleanedIds);
-        saveReadNotifications();
-      }
+    const stockRows = unifiedResponse.data?.stock || [];
+    stockNotifications.value = canViewStockAlerts.value ? stockRows : [];
+    stockMeta.value = unifiedResponse.stock_meta || null;
+    documentError.value = unifiedResponse.document_error || null;
+
+    const validReadIds = new Set(
+      (unifiedResponse.active_ids || []).map((id) => String(id)),
+    );
+    const validStockIds = new Set(stockRows.map((row) => String(row.id)));
+
+    const cleanedReadIds = unifiedResponse.active_ids?.length
+      ? [...readNotificationIds.value].filter((id) => validReadIds.has(id))
+      : [...readNotificationIds.value];
+    const cleanedDismissedIds = [...dismissedStockAlertIds.value].filter((id) =>
+      validStockIds.has(id),
+    );
+
+    const readChanged = cleanedReadIds.length !== readNotificationIds.value.size;
+    const dismissedChanged =
+      cleanedDismissedIds.length !== dismissedStockAlertIds.value.size;
+
+    if (readChanged) readNotificationIds.value = new Set(cleanedReadIds);
+    if (dismissedChanged)
+      dismissedStockAlertIds.value = new Set(cleanedDismissedIds);
+    if (readChanged || dismissedChanged) {
+      // Satu penulisan localStorage → satu event notificationRead.
+      saveNotificationLocalState({
+        readIds: readChanged ? readNotificationIds.value : undefined,
+        dismissedIds: dismissedChanged
+          ? dismissedStockAlertIds.value
+          : undefined,
+      });
     }
 
     // Merge pendingRows into approvalRows to prevent double data and unify into single module lists
@@ -444,6 +519,15 @@ const fetchNotifications = async (showLoading = true) => {
 };
 
 const handleOpenDetail = (notif: any, isRevisiSection = false) => {
+  if (notif.notification_type === "stock") {
+    router.push(
+      notif.alert_type === "EXPIRED"
+        ? "/inventory/stok/positions"
+        : "/inventory/master/rop",
+    );
+    return;
+  }
+
   if (notif.notification_category === "outstanding") {
     if (notif.outstanding_type === "purchase_request")
       router.push("/purchasing/order/auto-pr");
@@ -517,6 +601,21 @@ const handleMarkAsRead = async (notif: any, e?: Event) => {
   }
 };
 
+const handleDismissStockAlert = (notif: any) => {
+  const id = String(notif?.id);
+  if (!id) return;
+  const next = new Set(dismissedStockAlertIds.value);
+  if (next.has(id)) {
+    next.delete(id);
+    toast.success("Alert stok dipulihkan");
+  } else {
+    next.add(id);
+    toast.success("Alert stok di-dismiss sementara");
+  }
+  dismissedStockAlertIds.value = next;
+  saveDismissedStockAlerts();
+};
+
 const markAllAsRead = async () => {
   const allUnread = [
     ...notifications.value,
@@ -573,7 +672,9 @@ const markAllAsRead = async () => {
 };
 
 const getTabCount = (type: NotificationTab) =>
-  notificationCounts.value[type] || 0;
+  type === "stock"
+    ? stockUnreadCount.value
+    : notificationCounts.value[type] || 0;
 
 const setNotificationType = async (type: NotificationTab) => {
   if (activeNotificationType.value === type) return;
@@ -600,6 +701,7 @@ const handleVisibilityChange = () => {
 
 onMounted(() => {
   loadReadNotifications();
+  loadDismissedStockAlerts();
   fetchNotifications(true);
   window.addEventListener("notificationsUpdated", handleNotificationsUpdated);
   window.addEventListener("focus", handleWindowFocus);
@@ -674,6 +776,17 @@ onBeforeRouteUpdate(() => {
     <Separator />
 
     <div
+      v-if="documentError && !loading"
+      class="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+    >
+      <Info class="mt-0.5 h-4 w-4 shrink-0" />
+      <p>
+        Notifikasi dokumen belum dapat dimuat ({{ documentError }}). Alert stok
+        tetap ditampilkan.
+      </p>
+    </div>
+
+    <div
       v-if="!loading"
       class="rounded-lg border bg-card/80 p-3 shadow-sm"
       v-motion
@@ -684,7 +797,12 @@ onBeforeRouteUpdate(() => {
         transition: { type: 'spring', stiffness: 130, damping: 18 },
       }"
     >
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+      <div
+        :class="[
+          'grid grid-cols-1 gap-3 sm:grid-cols-2',
+          canViewStockAlerts ? 'md:grid-cols-5' : 'md:grid-cols-4',
+        ]"
+      >
         <button
           v-for="tab in notificationTabs"
           :key="tab.value"
@@ -746,9 +864,14 @@ onBeforeRouteUpdate(() => {
     <!-- Loading Skeleton -->
     <div v-if="loading" class="space-y-4">
       <div class="rounded-lg border bg-card/80 p-3 shadow-sm">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+        <div
+          :class="[
+            'grid grid-cols-1 gap-3 sm:grid-cols-2',
+            canViewStockAlerts ? 'md:grid-cols-5' : 'md:grid-cols-4',
+          ]"
+        >
           <div
-            v-for="i in 4"
+            v-for="i in canViewStockAlerts ? 5 : 4"
             :key="`filter-skeleton-${i}`"
             class="min-h-[104px] rounded-md border bg-muted/20 p-4"
           >
@@ -791,6 +914,18 @@ onBeforeRouteUpdate(() => {
       class="w-full"
       v-model="openAccordions"
     >
+      <StockAlertNotificationList
+        v-if="
+          canViewStockAlerts &&
+          (activeNotificationType === 'all' || activeNotificationType === 'stock')
+        "
+        :notifications="stockNotifications"
+        :is-dismissed="isStockAlertDismissed"
+        :meta="stockMeta"
+        @dismiss="handleDismissStockAlert"
+        @open-detail="handleOpenDetail"
+      />
+
       <StockGudangLockNotificationList
         v-if="
           activeNotificationType === 'all' || activeNotificationType === 'info'

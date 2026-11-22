@@ -20,6 +20,7 @@ import {
 } from './service.pr'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { finalizeNotificationAction } from '@/lib/notificationState'
 import FieldX from '@/components/field/FieldX.vue'
 
 const { API_BASE_URL } = useApi()
@@ -49,6 +50,8 @@ const formatDateTime = (dateString: string) => {
     minute: '2-digit'
   })
 }
+
+const handlePreviewImageError = () => toast.error('Gagal memuat gambar')
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
@@ -171,6 +174,7 @@ const handleApproval = async (status: 'APPROVED' | 'REVISI') => {
       )
     }
 
+    finalizeNotificationAction(notification.value.id)
     toast.success(`Purchase Request ${status === 'APPROVED' ? 'approved' : 'revised'} successfully`)
     router.push('/notifikasi')
   } catch (error: any) {
@@ -225,6 +229,7 @@ const handleReject = async () => {
       approvalCatatan.value
     )
 
+    finalizeNotificationAction(notification.value.id)
     toast.success('Purchase Request berhasil di-reject')
     router.push('/notifikasi')
   } catch (error: any) {
@@ -816,7 +821,7 @@ onMounted(() => {
                 style="max-height: calc(95vh - 200px);">
                 <img :src="getFileUrl(previewImages[currentPreviewIndex]?.gambar)"
                   :alt="`Image ${currentPreviewIndex + 1}`" class="max-w-[85vw] w-auto h-auto object-contain"
-                  style="max-height: calc(95vh - 220px);" @click.stop @error="() => toast.error('Gagal memuat gambar')" />
+                  style="max-height: calc(95vh - 220px);" @click.stop @error="handlePreviewImageError" />
               </div>
 
               <div class="flex items-center gap-2">

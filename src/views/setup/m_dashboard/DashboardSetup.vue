@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import {
   LayoutDashboard,
   Plus,
@@ -28,12 +29,28 @@ import {
   dashboardService,
   METRIC_CATALOG,
   DEFAULT_PRESET_WIDGETS,
+  type DashboardMetrics,
+  type DashboardScope,
   type DashboardWidget,
   type RoleItem,
   type WidgetType,
   type ColorTheme,
   type MetricMeta
 } from './dashboardService'
+import {
+  formatKpi,
+  formatWaktu,
+  getChartData,
+  getKpiValue,
+  getTableRows,
+  spanClass,
+  statusClass,
+  statusLabel,
+  visibleWidgets
+} from '@/lib/dashboardMapper'
+
+const authStore = useAuthStore()
+const canEdit = computed(() => authStore.isManager)
 
 // State
 const loadingRoles = ref(true)
@@ -50,7 +67,7 @@ const widgets = ref<DashboardWidget[]>([...DEFAULT_PRESET_WIDGETS])
 const activeTab = ref<'editor' | 'preview'>('editor')
 
 // Metrics live data
-const metricsData = ref<any>(null)
+const metricsData = ref<DashboardMetrics | null>(null)
 const loadingMetrics = ref(false)
 
 // Modal Widget Builder State
@@ -62,7 +79,7 @@ const formWidget = ref<DashboardWidget>({
   title: '',
   subtitle: '',
   type: 'bar',
-  metric: 'wo_status',
+  metric: 'sales_daily',
   grid_span: 6,
   color: 'blue',
   is_active: true
@@ -74,6 +91,28 @@ const currentRole = computed(() => {
   return roles.value.find(r => r.id === selectedRoleId.value) || null
 })
 
+// Pratinjau mengikuti role yang dipilih, sehingga widget penjualan tidak
+// tampil untuk Kasir/Gudang (backend juga tidak mengirim datanya).
+const previewScope = computed<DashboardScope>(() => {
+  if (selectedRoleId.value === 'all') {
+    return {
+      role_key: canEdit.value ? null : authStore.user?.role?.system_key || null,
+      role_label: canEdit.value ? null : authStore.user?.role?.nama_role || null,
+      is_manager: canEdit.value,
+      timezone: 'Asia/Jakarta'
+    }
+  }
+  const role = currentRole.value
+  const key = role?.system_key || ''
+  return {
+    role_key: key || null,
+    role_label: role?.nama_role || null,
+    is_manager: ['ADMIN', 'SUPER_ADMIN'].includes(key),
+    timezone: 'Asia/Jakarta'
+  }
+})
+const previewWidgets = computed(() => visibleWidgets(widgets.value, previewScope.value))
+
 // Current metric meta
 const currentMetricMeta = computed<MetricMeta | undefined>(() => {
   return METRIC_CATALOG.find(m => m.key === formWidget.value.metric)
@@ -82,9 +121,9 @@ const currentMetricMeta = computed<MetricMeta | undefined>(() => {
 // Grouped metric catalog
 const metricCategories = computed(() => {
   const groups: Record<string, MetricMeta[]> = {}
-  METRIC_CATALOG.forEach(m => {
+  METRIC_CATALOG.forEach((m) => {
     if (!groups[m.category]) groups[m.category] = []
-    groups[m.category].push(m)
+    groups[m.category]?.push(m)
   })
   return groups
 })
@@ -96,6 +135,11 @@ const availableTypesForMetric = computed<WidgetType[]>(() => {
 
 // Load roles
 async function loadRoles() {
+  if (!canEdit.value) {
+    roles.value = []
+    loadingRoles.value = false
+    return
+  }
   loadingRoles.value = true
   try {
     roles.value = await dashboardService.fetchRoles()
@@ -138,6 +182,8 @@ async function loadMetrics() {
   loadingMetrics.value = true
   try {
     metricsData.value = await dashboardService.fetchMetrics()
+  } catch (err: any) {
+    toast.error('Gagal memuat data pratinjau: ' + err.message)
   } finally {
     loadingMetrics.value = false
   }
@@ -158,6 +204,10 @@ function resetToPreset() {
 
 // Save config
 async function saveDashboard() {
+  if (!canEdit.value) {
+    toast.error('Hanya Admin / Super Admin yang dapat menyimpan konfigurasi dashboard')
+    return
+  }
   saving.value = true
   try {
     const targetRoleId = selectedRoleId.value === 'all' ? null : selectedRoleId.value
@@ -184,7 +234,7 @@ function openAddWidgetModal() {
     title: 'Grafik Baru',
     subtitle: '',
     type: 'bar',
-    metric: 'wo_status',
+    metric: 'sales_daily',
     grid_span: 6,
     color: 'blue',
     is_active: true
@@ -204,14 +254,19 @@ function deleteWidget(index: number) {
 }
 
 function moveWidget(index: number, direction: 'up' | 'down') {
+  const current = widgets.value[index]
+  if (!current) return
+
   if (direction === 'up' && index > 0) {
-    const temp = widgets.value[index]
-    widgets.value[index] = widgets.value[index - 1]
-    widgets.value[index - 1] = temp
+    const previous = widgets.value[index - 1]
+    if (!previous) return
+    widgets.value[index] = previous
+    widgets.value[index - 1] = current
   } else if (direction === 'down' && index < widgets.value.length - 1) {
-    const temp = widgets.value[index]
-    widgets.value[index] = widgets.value[index + 1]
-    widgets.value[index + 1] = temp
+    const next = widgets.value[index + 1]
+    if (!next) return
+    widgets.value[index] = next
+    widgets.value[index + 1] = current
   }
 }
 
@@ -246,109 +301,6 @@ function saveWidgetFromModal() {
   }
 
   isModalOpen.value = false
-}
-
-// Chart Helpers for live/preview data
-function getChartDataForMetric(metricKey: string, type: WidgetType) {
-  const m = metricsData.value
-  if (!m) {
-    return {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'],
-      data: [12, 19, 8, 15, 22, 30]
-    }
-  }
-
-  switch (metricKey) {
-    case 'wo_status': {
-      const rows = m.charts?.wo_status || []
-      return {
-        labels: rows.map((r: any) => r.status),
-        data: rows.map((r: any) => r.count)
-      }
-    }
-    case 'wo_monthly': {
-      const rows = m.charts?.wo_monthly || []
-      return {
-        labels: rows.map((r: any) => r.period),
-        data: rows.map((r: any) => r.count)
-      }
-    }
-    case 'po_monthly': {
-      const rows = m.charts?.po_monthly || []
-      return {
-        labels: rows.map((r: any) => r.period),
-        data: rows.map((r: any) => r.count)
-      }
-    }
-    case 'po_status': {
-      const rows = m.charts?.po_status || []
-      return {
-        labels: rows.map((r: any) => r.status),
-        data: rows.map((r: any) => r.count)
-      }
-    }
-    case 'pres_monthly': {
-      const rows = m.charts?.pres_monthly || []
-      return {
-        labels: rows.map((r: any) => r.period),
-        data: rows.map((r: any) => r.count)
-      }
-    }
-    case 'item_groups': {
-      const rows = m.charts?.item_groups || []
-      return {
-        labels: rows.map((r: any) => r.name),
-        data: rows.map((r: any) => r.count)
-      }
-    }
-    case 'top_suppliers': {
-      const rows = m.charts?.top_suppliers || []
-      return {
-        labels: rows.length > 0 ? rows.map((r: any) => r.name) : ['Supplier A', 'Supplier B', 'Supplier C'],
-        data: rows.length > 0 ? rows.map((r: any) => r.count) : [15, 9, 4]
-      }
-    }
-    default:
-      return {
-        labels: ['Sample 1', 'Sample 2', 'Sample 3', 'Sample 4'],
-        data: [10, 25, 18, 30]
-      }
-  }
-}
-
-function getKpiValueForMetric(metricKey: string): { value: string | number; change?: string } {
-  const sum = metricsData.value?.summary
-  if (!sum) return { value: '0' }
-
-  switch (metricKey) {
-    case 'wo_total':
-      return { value: sum.total_wo, change: '+12% bln ini' }
-    case 'po_total':
-      return { value: sum.total_po, change: '+8% bln ini' }
-    case 'items_total':
-      return { value: sum.total_items, change: 'Aktif' }
-    case 'suppliers_total':
-      return { value: sum.total_suppliers, change: 'Rekanan' }
-    case 'customers_total':
-      return { value: sum.total_customers, change: 'Terdaftar' }
-    case 'users_total':
-      return { value: sum.total_users, change: 'Pengguna' }
-    case 'pres_total':
-      return { value: sum.total_pres, change: 'Output' }
-    case 'treq_total':
-      return { value: sum.total_treq, change: 'Permintaan' }
-    default:
-      return { value: '0' }
-  }
-}
-
-function getTableDataForMetric(metricKey: string) {
-  const rec = metricsData.value?.recent
-  if (!rec) return []
-  if (metricKey === 'recent_wo') return rec.wo || []
-  if (metricKey === 'recent_po') return rec.po || []
-  if (metricKey === 'recent_pres') return rec.pres || []
-  return []
 }
 
 // Helpers for badges
@@ -404,7 +356,8 @@ onMounted(() => {
       <div class="flex items-center gap-2 flex-wrap">
         <button
           @click="resetToPreset"
-          class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors shadow-xs"
+          :disabled="!canEdit"
+          class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors shadow-xs disabled:opacity-50"
           title="Kembalikan susunan widget ke preset awal"
         >
           <RotateCcw class="h-4 w-4 text-muted-foreground" />
@@ -413,7 +366,8 @@ onMounted(() => {
 
         <button
           @click="openAddWidgetModal"
-          class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-xs"
+          :disabled="!canEdit"
+          class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-xs disabled:opacity-50"
         >
           <Plus class="h-4 w-4" />
           Tambah Widget
@@ -421,13 +375,21 @@ onMounted(() => {
 
         <button
           @click="saveDashboard"
-          :disabled="saving"
+          :disabled="saving || !canEdit"
           class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-xs"
         >
           <Save class="h-4 w-4" />
           {{ saving ? 'Menyimpan...' : 'Simpan Konfigurasi' }}
         </button>
       </div>
+    </div>
+
+    <!-- Pengaman akses: konfigurasi hanya untuk Admin / Super Admin -->
+    <div
+      v-if="!canEdit"
+      class="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-500/10 dark:text-amber-200"
+    >
+      <span>Hanya Admin / Super Admin yang dapat mengubah konfigurasi dashboard. Halaman ini hanya menampilkan pratinjau.</span>
     </div>
 
     <!-- Role Selector & Basic Settings Card -->
@@ -458,7 +420,7 @@ onMounted(() => {
           <input
             v-model="dashboardName"
             type="text"
-            placeholder="Contoh: Dashboard Produksi"
+            placeholder="Contoh: Dashboard Toko"
             class="w-full h-10 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-foreground"
           />
         </div>
@@ -514,7 +476,8 @@ onMounted(() => {
         </p>
         <button
           @click="openAddWidgetModal"
-          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+          :disabled="!canEdit"
+          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           <Plus class="h-4 w-4" />
           Tambah Widget Pertama
@@ -645,13 +608,20 @@ onMounted(() => {
         </button>
       </div>
 
+      <div
+        v-if="previewWidgets.length === 0"
+        class="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground"
+      >
+        Tidak ada widget yang dapat dipratinjau untuk role ini.
+      </div>
+
       <!-- Live Dashboard Grid -->
       <div class="grid grid-cols-12 gap-4">
-        <template v-for="w in widgets" :key="w.id">
+        <template v-for="w in previewWidgets" :key="w.id">
           <!-- KPI Card Widget -->
           <div
             v-if="w.type === 'kpi'"
-            :class="`col-span-12 sm:col-span-6 md:col-span-4 lg:col-span-${w.grid_span}`"
+            :class="['col-span-12', spanClass(w.grid_span)]"
             class="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow"
           >
             <div class="flex items-center justify-between">
@@ -671,11 +641,10 @@ onMounted(() => {
             </div>
             <div class="mt-3">
               <p class="text-2xl font-bold text-foreground">
-                {{ getKpiValueForMetric(w.metric).value }}
+                {{ formatKpi(getKpiValue(metricsData, w.metric)) }}
               </p>
-              <p class="text-xs mt-1 text-muted-foreground flex items-center gap-1">
-                <span class="text-emerald-500 dark:text-emerald-400 font-semibold">{{ getKpiValueForMetric(w.metric).change }}</span>
-                <span class="text-muted-foreground">• Realtime</span>
+              <p v-if="getKpiValue(metricsData, w.metric).note" class="text-xs mt-1 text-muted-foreground">
+                {{ getKpiValue(metricsData, w.metric).note }}
               </p>
             </div>
           </div>
@@ -683,7 +652,7 @@ onMounted(() => {
           <!-- Chart Widget -->
           <div
             v-else-if="['bar', 'line', 'doughnut', 'pie', 'area'].includes(w.type)"
-            :class="`col-span-12 lg:col-span-${w.grid_span}`"
+            :class="['col-span-12', spanClass(w.grid_span)]"
             class="bg-card rounded-xl border border-border p-5 shadow-sm"
           >
             <div class="flex items-center justify-between mb-4">
@@ -707,18 +676,22 @@ onMounted(() => {
 
             <!-- Render DynamicChart -->
             <DynamicChart
+              v-if="getChartData(metricsData, w.metric).labels.length > 0"
               :type="w.type as any"
-              :labels="getChartDataForMetric(w.metric, w.type).labels"
-              :data="getChartDataForMetric(w.metric, w.type).data"
+              :labels="getChartData(metricsData, w.metric).labels"
+              :data="getChartData(metricsData, w.metric).data"
               :color-theme="w.color"
               :height="260"
             />
+            <div v-else class="flex h-[260px] items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+              Belum ada data untuk grafik ini.
+            </div>
           </div>
 
           <!-- Table Widget -->
           <div
             v-else-if="w.type === 'table'"
-            :class="`col-span-12 lg:col-span-${w.grid_span}`"
+            :class="['col-span-12', spanClass(w.grid_span)]"
             class="bg-card rounded-xl border border-border p-5 shadow-sm"
           >
             <div class="flex items-center justify-between mb-3">
@@ -742,26 +715,22 @@ onMounted(() => {
                 </thead>
                 <tbody class="divide-y divide-border text-foreground">
                   <tr
-                    v-for="(row, rIdx) in getTableDataForMetric(w.metric)"
+                    v-for="(row, rIdx) in getTableRows(metricsData, w.metric)"
                     :key="rIdx"
                     class="hover:bg-muted/40 transition-colors"
                   >
-                    <td class="py-2.5 font-semibold text-foreground">{{ row.no || row.no_po || '-' }}</td>
-                    <td class="py-2.5 text-muted-foreground">{{ row.customer_name || row.supplier_name || row.shift || '-' }}</td>
+                    <td class="py-2.5 font-semibold text-foreground">
+                      <div>{{ row.no || row.no_po || '-' }}</div>
+                      <div class="text-[10px] font-normal text-muted-foreground">{{ formatWaktu(row.waktu) }}</div>
+                    </td>
+                    <td class="py-2.5 text-muted-foreground">{{ row.keterangan || '-' }}</td>
                     <td class="py-2.5 text-right">
-                      <span
-                        class="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                        :class="
-                          row.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
-                          row.status === 'DRAFT' ? 'bg-muted text-muted-foreground' :
-                          'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                        "
-                      >
-                        {{ row.status || 'DRAFT' }}
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold" :class="statusClass(row.status)">
+                        {{ statusLabel(row.status) }}
                       </span>
                     </td>
                   </tr>
-                  <tr v-if="getTableDataForMetric(w.metric).length === 0">
+                  <tr v-if="getTableRows(metricsData, w.metric).length === 0">
                     <td colspan="3" class="py-4 text-center text-muted-foreground">Tidak ada data transaksi terbaru</td>
                   </tr>
                 </tbody>
@@ -813,7 +782,7 @@ onMounted(() => {
                 v-model="formWidget.title"
                 type="text"
                 class="w-full h-10 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium text-foreground"
-                placeholder="Contoh: Status Work Order"
+                placeholder="Contoh: Tren Penjualan Harian"
               />
             </div>
             <div>
@@ -824,7 +793,7 @@ onMounted(() => {
                 v-model="formWidget.subtitle"
                 type="text"
                 class="w-full h-10 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-foreground"
-                placeholder="Contoh: Distribusi status pekerjaan produksi"
+                placeholder="Contoh: Omzet 7 hari terakhir (WIB)"
               />
             </div>
           </div>
@@ -944,10 +913,10 @@ onMounted(() => {
               <div v-if="formWidget.type === 'kpi'" class="bg-card p-4 rounded-lg border border-border shadow-xs max-w-xs">
                 <p class="text-xs text-muted-foreground font-medium uppercase">{{ formWidget.title }}</p>
                 <p class="text-2xl font-bold text-foreground mt-2">
-                  {{ getKpiValueForMetric(formWidget.metric).value }}
+                  {{ formatKpi(getKpiValue(metricsData, formWidget.metric)) }}
                 </p>
-                <p class="text-xs text-emerald-500 dark:text-emerald-400 font-semibold mt-1">
-                  {{ getKpiValueForMetric(formWidget.metric).change || '+10%' }}
+                <p v-if="getKpiValue(metricsData, formWidget.metric).note" class="text-xs text-emerald-500 dark:text-emerald-400 font-semibold mt-1">
+                  {{ getKpiValue(metricsData, formWidget.metric).note }}
                 </p>
               </div>
 
@@ -957,12 +926,16 @@ onMounted(() => {
 
               <div v-else class="bg-card p-4 rounded-lg border border-border shadow-xs">
                 <DynamicChart
+                  v-if="getChartData(metricsData, formWidget.metric).labels.length > 0"
                   :type="formWidget.type as any"
-                  :labels="getChartDataForMetric(formWidget.metric, formWidget.type).labels"
-                  :data="getChartDataForMetric(formWidget.metric, formWidget.type).data"
+                  :labels="getChartData(metricsData, formWidget.metric).labels"
+                  :data="getChartData(metricsData, formWidget.metric).data"
                   :color-theme="formWidget.color"
                   :height="180"
                 />
+                <div v-else class="flex h-[180px] items-center justify-center text-xs text-muted-foreground">
+                  Belum ada data untuk grafik ini.
+                </div>
               </div>
             </div>
           </div>

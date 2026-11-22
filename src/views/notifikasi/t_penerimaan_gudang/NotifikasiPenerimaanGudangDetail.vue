@@ -47,6 +47,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "vue-sonner";
+import { finalizeNotificationAction } from "@/lib/notificationState";
 import {
   getPenerimaanGudangNotifications,
   revisePenerimaanGudang,
@@ -166,6 +167,7 @@ const handleApproval = async (status: "APPROVED" | "REVISI") => {
       }
     }
 
+    finalizeNotificationAction(notification.value.id);
     toast.success(
       `Penerimaan Gudang ${status === "APPROVED" ? "approved" : "revised"} successfully`,
     );
@@ -202,6 +204,7 @@ const handleReject = async () => {
       approvalCatatan.value,
     );
 
+    finalizeNotificationAction(notification.value.id);
     toast.success("Penerimaan Gudang berhasil di-reject");
     router.push("/notifikasi");
   } catch (error: any) {

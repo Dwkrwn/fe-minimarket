@@ -21,6 +21,7 @@ import {
 } from './service.po'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { finalizeNotificationAction } from '@/lib/notificationState'
 import FieldX from '@/components/field/FieldX.vue'
 import { getPurchaseOrder } from '@/views/purchasing/order/purchase_orders/purchaseOrderService'
 
@@ -169,6 +170,7 @@ const handleApproval = async (status: 'APPROVED' | 'REVISI') => {
       )
     }
 
+    finalizeNotificationAction(notification.value.id)
     toast.success(`Purchase Order ${status === 'APPROVED' ? 'approved' : 'revised'} successfully`)
     router.push('/notifikasi')
   } catch (error: any) {
@@ -223,6 +225,7 @@ const handleReject = async () => {
       approvalCatatan.value
     )
 
+    finalizeNotificationAction(notification.value.id)
     toast.success('Purchase Order berhasil di-reject')
     router.push('/notifikasi')
   } catch (error: any) {

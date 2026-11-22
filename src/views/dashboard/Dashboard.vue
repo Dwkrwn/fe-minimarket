@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Settings2,
   RefreshCw,
-  Users,
-  Package,
+  AlertTriangle,
+  Clock3,
   ShoppingCart,
+  ReceiptText,
+  Wallet,
+  Package,
   Boxes,
+  Users,
   Grid,
   BarChart3,
   LineChart,
@@ -18,247 +23,147 @@ import { useAuthStore } from '@/stores/auth'
 import DynamicChart from '@/components/dashboard/DynamicChart.vue'
 import {
   dashboardService,
-  DEFAULT_PRESET_WIDGETS,
+  presetForRole,
+  type DashboardMetrics,
+  type DashboardScope,
   type DashboardWidget,
   type RoleItem,
 } from '@/views/setup/m_dashboard/dashboardService'
+import {
+  formatKpi,
+  formatNumber,
+  formatWaktu,
+  getChartData,
+  getKpiValue,
+  getTableRows,
+  spanClass,
+  statusClass,
+  statusLabel,
+  visibleWidgets,
+} from '@/lib/dashboardMapper'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(true)
 const refreshing = ref(false)
+const loadError = ref('')
 const roles = ref<RoleItem[]>([])
 const selectedRoleId = ref<string>('all')
 
-const dashboardTitle = ref('Dasbor')
-const dashboardDesc = ref('Ringkasan kegiatan toko hari ini.')
-const widgets = ref<DashboardWidget[]>([])
-const metricsData = ref<any>(null)
+const dashboardTitle = ref('Dashboard Toko')
+const dashboardDesc = ref('Ringkasan penjualan, pembelian, dan aktivitas toko.')
+const configuredWidgets = ref<DashboardWidget[]>([])
+const metricsData = ref<DashboardMetrics | null>(null)
 
-const kpiWidgets = computed(() => widgets.value.filter(w => w.type === 'kpi'))
-const contentWidgets = computed(() => widgets.value.filter(w => w.type !== 'kpi'))
+const defaultScope = computed<DashboardScope>(() => ({
+  role_key: authStore.user?.role?.system_key || null,
+  role_label: authStore.user?.role?.nama_role || null,
+  is_manager: authStore.isManager,
+  timezone: 'Asia/Jakarta',
+}))
+const scope = computed<DashboardScope>(() => metricsData.value?.scope || defaultScope.value)
+const roleKey = computed(() => scope.value.role_key || '')
+const isManager = computed(() => scope.value.is_manager)
 
-async function loadDashboardConfig(roleId?: string | null) {
-  try {
-    const targetRoleId = roleId && roleId !== 'all' ? roleId : null
-    const record = authStore.user?.capabilities?.dashboard ? await dashboardService.fetchConfig(targetRoleId) : null
+// Konfigurasi diambil per role login. Hanya Admin/Super Admin yang boleh
+// berpindah role untuk melihat konfigurasi peran lain.
+const configRoleId = computed(() =>
+  isManager.value
+    ? selectedRoleId.value === 'all'
+      ? null
+      : selectedRoleId.value
+    : authStore.user?.role?.id || null
+)
 
-    if (record && Array.isArray(record.config) && record.config.length > 0) {
-      dashboardTitle.value = record.nama_dashboard || 'Dasbor'
-      dashboardDesc.value = record.deskripsi || 'Ringkasan kegiatan toko.'
-      widgets.value = record.config
-    } else {
-      dashboardTitle.value = 'Dasbor Toko'
-      dashboardDesc.value = 'Ringkasan kegiatan toko dan persediaan.'
-      widgets.value = [...DEFAULT_PRESET_WIDGETS]
-    }
-  } catch (err) {
-    console.error('Gagal memuat pengaturan dasbor:', err)
-    widgets.value = [...DEFAULT_PRESET_WIDGETS]
-  }
+const widgets = computed(() => visibleWidgets(configuredWidgets.value, scope.value))
+const kpiWidgets = computed(() => widgets.value.filter((w) => w.type === 'kpi'))
+const contentWidgets = computed(() => widgets.value.filter((w) => w.type !== 'kpi'))
+
+const ICON_BY_METRIC: Record<string, Component> = {
+  sales_today: Wallet,
+  avg_basket: ShoppingCart,
+  unpaid_amount: Wallet,
+  transactions_today: ReceiptText,
+  open_shifts: Clock3,
+  my_shift_status: Clock3,
+  po_pending: Package,
+  goods_receipt_today: Boxes,
+  unpaid_invoices: Wallet,
+  returns_issued: Package,
+}
+
+function iconForMetric(metric: string): Component {
+  return ICON_BY_METRIC[metric] || Grid
+}
+
+function tableHasAmount(metric: string): boolean {
+  if (roleKey.value === 'KASIR') return false
+  return getTableRows(metricsData.value, metric).some(
+    (row) => typeof row.amount === 'number'
+  )
 }
 
 async function loadMetrics() {
-  if (!authStore.user?.capabilities?.dashboard) return
   try {
     metricsData.value = await dashboardService.fetchMetrics()
+    loadError.value = ''
   } catch (err) {
-    console.error('Gagal memuat data dasbor:', err)
+    metricsData.value = null
+    loadError.value = err instanceof Error ? err.message : 'Gagal memuat data dashboard'
+  }
+}
+
+async function loadDashboardConfig() {
+  const selectedRole = roles.value.find((r) => r.id === selectedRoleId.value)
+  const key =
+    isManager.value && selectedRoleId.value !== 'all' && selectedRole?.system_key
+      ? selectedRole.system_key
+      : roleKey.value
+  dashboardTitle.value =
+    key === 'KASIR' ? 'Dashboard Kasir' : key === 'GUDANG' ? 'Dashboard Gudang' : 'Dashboard Toko'
+  dashboardDesc.value =
+    key === 'KASIR'
+      ? 'Informasi shift dan struk yang Anda buat.'
+      : key === 'GUDANG'
+        ? 'Ringkasan pembelian dan penerimaan barang.'
+        : 'Ringkasan penjualan, pembelian, dan aktivitas toko.'
+  configuredWidgets.value = [...presetForRole(key)]
+
+  try {
+    const record = await dashboardService.fetchConfig(configRoleId.value)
+    if (record && record.is_active !== false && Array.isArray(record.config) && record.config.length > 0) {
+      dashboardTitle.value = record.nama_dashboard || dashboardTitle.value
+      dashboardDesc.value = record.deskripsi || dashboardDesc.value
+      configuredWidgets.value = record.config
+    }
+  } catch (err) {
+    console.error('Gagal memuat pengaturan dashboard:', err)
   }
 }
 
 async function refreshDashboard() {
   refreshing.value = true
-  await Promise.all([
-    loadDashboardConfig(selectedRoleId.value),
-    loadMetrics(),
-  ])
+  await Promise.all([loadMetrics(), loadDashboardConfig()])
   refreshing.value = false
 }
 
 async function onRoleChange() {
   loading.value = true
-  await loadDashboardConfig(selectedRoleId.value)
+  await loadDashboardConfig()
   loading.value = false
-}
-
-function getChartDataForMetric(metricKey: string) {
-  const m = metricsData.value
-  if (!m) {
-    return {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'],
-      data: [12, 19, 8, 15, 22, 30],
-    }
-  }
-
-  switch (metricKey) {
-    case 'wo_status': {
-      const rows = m.charts?.wo_status || []
-      return {
-        labels: rows.map((r: any) => r.status),
-        data: rows.map((r: any) => r.count),
-      }
-    }
-    case 'wo_monthly': {
-      const rows = m.charts?.wo_monthly || []
-      return {
-        labels: rows.map((r: any) => r.period),
-        data: rows.map((r: any) => r.count),
-      }
-    }
-    case 'po_monthly': {
-      const rows = m.charts?.po_monthly || []
-      return {
-        labels: rows.map((r: any) => r.period),
-        data: rows.map((r: any) => r.count),
-      }
-    }
-    case 'po_status': {
-      const rows = m.charts?.po_status || []
-      return {
-        labels: rows.map((r: any) => r.status),
-        data: rows.map((r: any) => r.count),
-      }
-    }
-    case 'pres_monthly': {
-      const rows = m.charts?.pres_monthly || []
-      return {
-        labels: rows.map((r: any) => r.period),
-        data: rows.map((r: any) => r.count),
-      }
-    }
-    case 'item_groups': {
-      const rows = m.charts?.item_groups || []
-      return {
-        labels: rows.map((r: any) => r.name),
-        data: rows.map((r: any) => r.count),
-      }
-    }
-    case 'top_suppliers': {
-      const rows = m.charts?.top_suppliers || []
-      return {
-        labels: rows.length > 0 ? rows.map((r: any) => r.name) : ['Supplier Utama', 'Supplier Mitra'],
-        data: rows.length > 0 ? rows.map((r: any) => r.count) : [10, 5],
-      }
-    }
-    default:
-      return {
-        labels: ['Data 1', 'Data 2', 'Data 3', 'Data 4'],
-        data: [10, 25, 18, 30],
-      }
-  }
-}
-
-function getKpiValueForMetric(metricKey: string): { value: string | number; note?: string; icon: any } {
-  const sum = metricsData.value?.summary
-  if (!sum) return { value: '0', icon: Grid }
-
-  switch (metricKey) {
-    case 'wo_total':
-      return { value: sum.total_wo, note: 'Pekerjaan produksi', icon: Boxes }
-    case 'po_total':
-      return { value: sum.total_po, note: 'Pesanan pembelian', icon: ShoppingCart }
-    case 'items_total':
-      return { value: sum.total_items, note: 'Produk aktif', icon: Package }
-    case 'suppliers_total':
-      return { value: sum.total_suppliers, note: 'Pemasok terdaftar', icon: Users }
-    case 'customers_total':
-      return { value: sum.total_customers, note: 'Pelanggan terdaftar', icon: Users }
-    case 'users_total':
-      return { value: sum.total_users, note: 'Akun pengguna', icon: Users }
-    case 'pres_total':
-      return { value: sum.total_pres, note: 'Hasil produksi', icon: Boxes }
-    case 'treq_total':
-      return { value: sum.total_treq, note: 'Permintaan transfer', icon: Package }
-    default:
-      return { value: '0', icon: Grid }
-  }
-}
-
-function getTableDataForMetric(metricKey: string) {
-  const rec = metricsData.value?.recent
-  if (!rec) return []
-  if (metricKey === 'recent_wo') return rec.wo || []
-  if (metricKey === 'recent_po') return rec.po || []
-  if (metricKey === 'recent_pres') return rec.pres || []
-  return []
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  APPROVED: 'Disetujui',
-  DRAFT: 'Draf',
-  PENDING: 'Menunggu',
-  PROCESS: 'Diproses',
-  REJECTED: 'Ditolak',
-  CANCELLED: 'Dibatalkan',
-  COMPLETED: 'Selesai',
-  DONE: 'Selesai',
-  PAID: 'Lunas',
-  UNPAID: 'Belum dibayar',
-  RECEIVED: 'Diterima',
-}
-
-function statusLabel(status?: string) {
-  const key = String(status || '').toUpperCase()
-  return STATUS_LABELS[key] || (status ? status : 'Draf')
-}
-
-function statusClass(status?: string) {
-  const key = String(status || '').toUpperCase()
-  if (['APPROVED', 'COMPLETED', 'DONE', 'PAID', 'RECEIVED'].includes(key)) {
-    return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300'
-  }
-  if (['REJECTED', 'CANCELLED'].includes(key)) {
-    return 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300'
-  }
-  if (['DRAFT', 'PENDING'].includes(key)) {
-    return 'bg-muted text-muted-foreground'
-  }
-  return 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
-}
-
-function formatNumber(val: number | string) {
-  if (typeof val === 'number') {
-    return val.toLocaleString('id-ID')
-  }
-  return val
-}
-
-// Kelas kolom statis agar terbaca oleh Tailwind
-const SPAN_CLASSES: Record<number, string> = {
-  4: 'lg:col-span-4',
-  5: 'lg:col-span-5',
-  6: 'lg:col-span-6',
-  7: 'lg:col-span-7',
-  8: 'lg:col-span-8',
-  9: 'lg:col-span-9',
-  12: 'lg:col-span-12',
-}
-
-function spanClass(span?: number) {
-  return SPAN_CLASSES[Number(span) || 6] || 'lg:col-span-6'
 }
 
 onMounted(async () => {
   loading.value = true
   try {
-    roles.value = authStore.isManager ? await dashboardService.fetchRoles().catch(() => []) : []
-
-    const user = authStore.currentUser
-    if (user?.role) selectedRoleId.value = user.role.id
-    if (user && user.user_details && user.user_details.length > 0) {
-      const firstRespo = user.user_details[0]?.m_respo
-      const firstRole = firstRespo?.m_respo_ds?.[0]?.m_role_id
-      if (firstRole) {
-        selectedRoleId.value = firstRole
-      }
+    // Metrik dimuat lebih dulu agar title/preset mengikuti scope dari backend.
+    await loadMetrics()
+    if (authStore.isManager) {
+      roles.value = await dashboardService.fetchRoles().catch(() => [])
+      if (authStore.user?.role?.id) selectedRoleId.value = authStore.user.role.id
     }
-
-    await Promise.all([
-      loadDashboardConfig(selectedRoleId.value),
-      loadMetrics(),
-    ])
+    await loadDashboardConfig()
   } finally {
     loading.value = false
   }
@@ -276,7 +181,7 @@ onMounted(async () => {
 
       <div class="flex flex-wrap items-center gap-2">
         <label
-          v-if="roles.length > 0"
+          v-if="isManager && roles.length > 0"
           class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm"
         >
           <span class="text-muted-foreground">Tampilan</span>
@@ -285,7 +190,7 @@ onMounted(async () => {
             class="cursor-pointer bg-transparent font-medium text-foreground focus:outline-none"
             @change="onRoleChange"
           >
-            <option value="all">Semua peran</option>
+            <option value="all">Konfigurasi global</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">
               {{ r.nama_role }}
             </option>
@@ -303,14 +208,27 @@ onMounted(async () => {
         </button>
 
         <button
+          v-if="isManager"
           type="button"
           class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           @click="router.push('/setup/m_dashboard')"
         >
           <Settings2 class="h-4 w-4 text-muted-foreground" />
-          <span class="hidden sm:inline">Atur dasbor</span>
+          <span class="hidden sm:inline">Atur dashboard</span>
         </button>
       </div>
+    </div>
+
+    <!-- Gagal memuat data metrik -->
+    <div
+      v-if="loadError"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-500/10 dark:text-amber-200"
+    >
+      <div class="flex items-center gap-2">
+        <AlertTriangle class="h-4 w-4 shrink-0" />
+        <span>Data dashboard tidak dapat dimuat: {{ loadError }}</span>
+      </div>
+      <button type="button" class="font-semibold underline" @click="refreshDashboard">Coba lagi</button>
     </div>
 
     <!-- Memuat data -->
@@ -323,19 +241,22 @@ onMounted(async () => {
         </div>
       </div>
       <div class="grid gap-4 lg:grid-cols-2">
-        <div class="h-80 rounded-xl border border-border bg-card p-5">
-          <Skeleton class="mb-4 h-5 w-40 rounded" />
-          <Skeleton class="h-56 w-full rounded-lg" />
-        </div>
-        <div class="h-80 rounded-xl border border-border bg-card p-5">
+        <div v-for="i in 2" :key="i" class="h-80 rounded-xl border border-border bg-card p-5">
           <Skeleton class="mb-4 h-5 w-40 rounded" />
           <Skeleton class="h-56 w-full rounded-lg" />
         </div>
       </div>
     </div>
 
-    <!-- Isi dasbor -->
+    <!-- Isi dashboard -->
     <div v-else class="space-y-5">
+      <div
+        v-if="widgets.length === 0"
+        class="rounded-xl border border-dashed border-border bg-card p-12 text-center text-sm text-muted-foreground"
+      >
+        Belum ada widget yang dapat ditampilkan untuk peran ini.
+      </div>
+
       <!-- Ringkasan angka -->
       <div v-if="kpiWidgets.length > 0" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div
@@ -347,15 +268,15 @@ onMounted(async () => {
             <div class="min-w-0">
               <p class="text-sm text-muted-foreground">{{ w.title }}</p>
               <p class="mt-2 text-3xl font-semibold tracking-tight text-foreground">
-                {{ formatNumber(getKpiValueForMetric(w.metric).value) }}
+                {{ formatKpi(getKpiValue(metricsData, w.metric)) }}
               </p>
             </div>
             <div class="rounded-lg bg-primary/10 p-2.5 text-primary">
-              <component :is="getKpiValueForMetric(w.metric).icon" class="h-5 w-5" />
+              <component :is="iconForMetric(w.metric)" class="h-5 w-5" />
             </div>
           </div>
-          <p v-if="getKpiValueForMetric(w.metric).note" class="mt-3 text-xs text-muted-foreground">
-            {{ getKpiValueForMetric(w.metric).note }}
+          <p v-if="getKpiValue(metricsData, w.metric).note" class="mt-3 text-xs text-muted-foreground">
+            {{ getKpiValue(metricsData, w.metric).note }}
           </p>
         </div>
       </div>
@@ -387,16 +308,20 @@ onMounted(async () => {
               </div>
 
               <DynamicChart
+                v-if="getChartData(metricsData, w.metric).labels.length > 0"
                 :type="w.type as any"
-                :labels="getChartDataForMetric(w.metric).labels"
-                :data="getChartDataForMetric(w.metric).data"
+                :labels="getChartData(metricsData, w.metric).labels"
+                :data="getChartData(metricsData, w.metric).data"
                 :color-theme="w.color"
                 :height="280"
               />
+              <div v-else class="flex h-[280px] items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+                Belum ada data untuk grafik ini.
+              </div>
             </div>
           </div>
 
-          <!-- Tabel -->
+          <!-- Tabel aktivitas -->
           <div
             v-else-if="w.type === 'table'"
             :class="spanClass(w.grid_span)"
@@ -416,19 +341,26 @@ onMounted(async () => {
               <table class="w-full text-left text-sm">
                 <thead>
                   <tr class="border-b border-border text-xs font-medium text-muted-foreground">
-                    <th class="px-2 pb-3">Nomor</th>
+                    <th class="px-2 pb-3">Nomor / Waktu</th>
                     <th class="px-2 pb-3">Keterangan</th>
+                    <th v-if="tableHasAmount(w.metric)" class="px-2 pb-3 text-right">Nominal</th>
                     <th class="px-2 pb-3 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-border">
                   <tr
-                    v-for="(row, rIdx) in getTableDataForMetric(w.metric)"
+                    v-for="(row, rIdx) in getTableRows(metricsData, w.metric)"
                     :key="rIdx"
                     class="hover:bg-muted/40"
                   >
-                    <td class="px-2 py-3 font-mono font-medium text-primary">{{ row.no || row.no_po || '-' }}</td>
-                    <td class="px-2 py-3 text-muted-foreground">{{ row.customer_name || row.supplier_name || row.shift || '-' }}</td>
+                    <td class="px-2 py-3">
+                      <div class="font-mono font-medium text-primary">{{ row.no || row.no_po || '-' }}</div>
+                      <div class="text-xs text-muted-foreground">{{ formatWaktu(row.waktu) }}</div>
+                    </td>
+                    <td class="px-2 py-3 text-muted-foreground">{{ row.keterangan || '-' }}</td>
+                    <td v-if="tableHasAmount(w.metric)" class="px-2 py-3 text-right font-medium">
+                      {{ formatNumber(row.amount || 0) }}
+                    </td>
                     <td class="px-2 py-3 text-right">
                       <span
                         class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
@@ -438,9 +370,9 @@ onMounted(async () => {
                       </span>
                     </td>
                   </tr>
-                  <tr v-if="getTableDataForMetric(w.metric).length === 0">
-                    <td colspan="3" class="py-8 text-center text-sm text-muted-foreground">
-                      Tidak ada transaksi terkini
+                  <tr v-if="getTableRows(metricsData, w.metric).length === 0">
+                    <td :colspan="tableHasAmount(w.metric) ? 4 : 3" class="py-8 text-center text-sm text-muted-foreground">
+                      Tidak ada aktivitas terkini.
                     </td>
                   </tr>
                 </tbody>

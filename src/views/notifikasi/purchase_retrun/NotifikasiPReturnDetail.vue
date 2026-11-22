@@ -55,6 +55,7 @@ import {
 } from "./service.preturn";
 import { useApi } from "@/composables/useApi";
 import { useAuthStore } from "@/stores/auth";
+import { finalizeNotificationAction } from "@/lib/notificationState";
 import FieldX from "@/components/field/FieldX.vue";
 
 const { API_BASE_URL } = useApi();
@@ -450,6 +451,7 @@ const handleApproval = async (status: "APPROVED" | "REVISI") => {
       }
     }
 
+    finalizeNotificationAction(notification.value.id);
     toast.success(
       `Purchase Return ${status === "APPROVED" ? "approved" : "revised"} successfully`,
     );
@@ -507,6 +509,7 @@ const handleReject = async () => {
       approvalCatatan.value,
     );
 
+    finalizeNotificationAction(notification.value.id);
     toast.success("Purchase Return berhasil di-reject");
     router.push("/notifikasi");
   } catch (error: any) {

@@ -1,7 +1,35 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const NOTIFICATION_FUNCTIONS_BASE_URL = import.meta.env.VITE_NOTIFICATION_FUNCTIONS_BASE_URL
 
 // Export API_BASE_URL for use in components
 export { API_BASE_URL }
+
+/**
+ * Endpoint /fn/notifikasi_controller/... adalah Supabase Function, bukan
+ * Express. di lokal VITE_API_BASE_URL mengarah ke Express agar endpoint
+ * /v1/notifications/stock-alerts tetap reachable, sehingga endpoint /fn
+ * harus memakai base tersendiri.
+ *
+ * Fallback ke API_BASE_URL menjaga perilaku produksi/legacy tidak berubah
+ * bila env baru belum diset.
+ */
+const isNotificationFunctionEndpoint = (endpoint: string) =>
+  /^\/fn(?:\/|$)/.test(endpoint)
+
+/**
+ * Dipakai juga oleh fetch mentah di login.vue yang tidak lewat apiCall().
+ * Fallback ke API_BASE_URL menjaga perilaku produksi/legacy.
+ */
+export const notificationFunctionUrl = (endpoint: string) => {
+  const normalized = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+  const base = (NOTIFICATION_FUNCTIONS_BASE_URL || API_BASE_URL || '').replace(/\/+$/, '')
+  return `${base}${normalized}`
+}
+
+const resolveRequestUrl = (endpoint: string) =>
+  isNotificationFunctionEndpoint(endpoint)
+    ? notificationFunctionUrl(endpoint)
+    : `${API_BASE_URL}${endpoint}`
 
 /**
  * Backend me-mount modul bisnis di "/api/v1/..." (lihat be-minimarket: modules/index.js).
@@ -192,7 +220,7 @@ export async function apiCall<T>(
     requestBody = JSON.stringify(requestBody)
   }
 
-  const response = await fetch(`${API_BASE_URL}${sanitizedEndpoint}`, {
+  const response = await fetch(resolveRequestUrl(sanitizedEndpoint), {
     ...options,
     headers,
     body: requestBody
@@ -201,9 +229,11 @@ export async function apiCall<T>(
   const data = (await response.json().catch(() => ({}))) ?? {}
   const method = options.method?.toUpperCase()
 
-  // Check untuk token expired atau invalid
-  // Support berbagai format error message dari backend
-  const isTokenExpired = response.status === 401
+  // 401 dari endpoint Express lokal = sesi berakhir → logout global.
+  // 401 dari Supabase Function hanya berarti token lokal tidak diterima
+  // layanan lain. Jangan menghapus sesi Express karena itu.
+  const isTokenExpired =
+    response.status === 401 && !isNotificationFunctionEndpoint(sanitizedEndpoint)
 
   if (isTokenExpired) {
     const error = new TokenExpiredError(data.message || 'Session expired')

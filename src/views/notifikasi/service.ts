@@ -120,6 +120,20 @@ import { type PurchaseReturnNotification } from "./purchase_retrun/service.pretu
 import { type PenerimaanGudangNotification } from "./t_penerimaan_gudang/service.penerimaan_gudang";
 import { type SupplierNotification } from "./supplier/service.supplier";
 import { type StockOpnameNotification } from "./stock_opname/service.stock_opname";
+import {
+  getStockAlerts,
+  type StockAlertNotification,
+  type StockAlertsMeta,
+} from "./stock/service.stock";
+
+export {
+  getStockAlerts,
+  canViewStockAlerts,
+  clearStockAlertsCache,
+  type StockAlertNotification,
+  type StockAlertsMeta,
+  type StockAlertsSnapshot,
+} from "./stock/service.stock";
 
 // ============================================================================
 // COMBINED TYPES
@@ -143,7 +157,8 @@ export type NotificationItem = (
     | "purchase_return"
     | "penerimaan_gudang"
     | "supplier"
-    | "stock_opname";
+    | "stock_opname"
+    | "stock";
   notification_category?: "approval" | "outstanding" | "info";
   info_type?: "revisi" | "pending_approval" | "stock_opname_lock" | string;
   outstanding_type?: "purchase_request" | "purchase_order" | string;
@@ -166,6 +181,14 @@ export type NotificationItem = (
   t_stock_opname_id?: string;
   m_supplier_id?: string;
   t_stock_adj_id?: string;
+  // Stock alert fields (alert stok tidak punya status baca permanen)
+  alert_type?: "LOW_STOCK" | "EXPIRED";
+  nama_item?: string;
+  stok?: number;
+  batas?: number;
+  tingkat?: string;
+  expired_date?: string | null;
+  hari_menuju_expired?: number | null;
   m_item?: ItemNotification["m_item"];
   t_purchase_request?: PRNotification["t_purchase_request"];
   user_default?: { id?: string; name?: string } | null;
@@ -195,6 +218,7 @@ export interface UnifiedNotificationResponse {
     info: NotificationItem[];
     revisi?: NotificationItem[];
     pending_approval?: NotificationItem[];
+    stock?: StockAlertNotification[];
   };
   counts?: {
     all: number;
@@ -204,8 +228,13 @@ export interface UnifiedNotificationResponse {
     revisi?: number;
     pending_approval?: number;
     total?: number;
+    stock?: number;
   };
   active_ids?: string[];
+  stock_meta?: StockAlertsMeta | null;
+  stock_generated_at?: string | null;
+  /** Diisi saat Supabase Function dokumen gagal; stok tetap disajikan. */
+  document_error?: string | null;
 }
 
 // ============================================================================
@@ -350,6 +379,79 @@ export async function getUnifiedNotifications(
       unifiedNotificationInFlight = null;
     }
   }
+}
+
+/**
+ * Snapshot kosong saat Supabase Function dokumen gagal. Dipakai supaya
+ * kegagalan dokumen tidak menjatuhkan tab Stok maupun badge sidebar.
+ */
+const emptyDocumentSnapshot = (): UnifiedNotificationResponse => ({
+  status: "error",
+  data: {
+    all: [],
+    approval: [],
+    outstanding: [],
+    info: [],
+    revisi: [],
+    pending_approval: [],
+  },
+  counts: {
+    all: 0,
+    approval: 0,
+    outstanding: 0,
+    info: 0,
+    revisi: 0,
+    pending_approval: 0,
+    total: 0,
+    stock: 0,
+  },
+  active_ids: [],
+});
+
+/**
+ * Snapshot tunggal untuk halaman notifikasi DAN badge sidebar.
+ * Dokumen berasal dari Supabase function, alert stok dari backend Express.
+ * Keduanya dipanggil terpisah (allSettled): error salah satu layanan tidak
+ * boleh membuat layanan lain ikut kosong.
+ */
+export async function getNotificationSnapshot(
+  page = 1,
+  limit = 100,
+  forceRefresh = false,
+): Promise<UnifiedNotificationResponse> {
+  const [unifiedResult, stockResult] = await Promise.allSettled([
+    getUnifiedNotifications(page, limit, forceRefresh),
+    getStockAlerts(forceRefresh),
+  ]);
+
+  const unified =
+    unifiedResult.status === "fulfilled"
+      ? unifiedResult.value
+      : emptyDocumentSnapshot();
+  const stock = stockResult.status === "fulfilled" ? stockResult.value : null;
+  const documentError =
+    unifiedResult.status === "rejected"
+      ? unifiedResult.reason instanceof Error
+        ? unifiedResult.reason.message
+        : String(unifiedResult.reason)
+      : null;
+
+  return {
+    ...unified,
+    status: unifiedResult.status === "fulfilled" ? unified.status : "partial",
+    data: {
+      ...unified.data,
+      stock: stock?.items || [],
+    },
+    counts: {
+      ...unified.counts,
+      stock: stock?.counts.total || 0,
+    } as UnifiedNotificationResponse["counts"],
+    active_ids: unified.active_ids || [],
+    stock_meta: stock?.meta || null,
+    stock_generated_at: stock?.generatedAt || null,
+    document_error: documentError,
+  };
 }
 
 // ============================================================================

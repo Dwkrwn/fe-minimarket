@@ -1,6 +1,13 @@
 import { ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { getUnifiedNotifications } from '@/views/notifikasi/service'
+import { getNotificationSnapshot } from '@/views/notifikasi/service'
+import {
+  DISMISSED_STOCK_ALERTS_STORAGE_KEY,
+  READ_NOTIFICATIONS_STORAGE_KEY,
+  countUnreadNotifications,
+  loadDismissedStockAlertIds,
+  loadReadNotificationIds,
+  saveNotificationLocalState,
+} from '@/lib/notificationState'
 
 /**
  * Single owner for the notification badge.
@@ -12,31 +19,25 @@ import { getUnifiedNotifications } from '@/views/notifikasi/service'
  * consumers only read `notificationCount`.
  */
 
-const NOTIFICATION_STORAGE_KEY = 'bb_read_notifications'
 const POLL_INTERVAL_MS = 5 * 60_000
 
 const notificationCount = ref(0)
 const readNotificationIds = ref<Set<string>>(new Set())
+const dismissedStockAlertIds = ref<Set<string>>(new Set())
 
 let started = false
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let inFlight = false
 
 const loadReadNotifications = () => {
-  try {
-    const stored = localStorage.getItem(NOTIFICATION_STORAGE_KEY)
-    readNotificationIds.value = stored ? new Set(JSON.parse(stored) as string[]) : new Set()
-  } catch {
-    readNotificationIds.value = new Set()
-  }
+  readNotificationIds.value = loadReadNotificationIds()
+}
+
+const loadDismissedStockAlerts = (activeIds?: Set<string>) => {
+  dismissedStockAlertIds.value = loadDismissedStockAlertIds(activeIds)
 }
 
 const fetchNotificationCounts = async (forceRefresh = false) => {
-  const authStore = useAuthStore()
-  if (!authStore.user?.capabilities?.notifications) {
-    notificationCount.value = 0
-    return
-  }
   // Dedupe concurrent callers (mount, event, interval).
   if (inFlight) return
   inFlight = true
@@ -44,27 +45,53 @@ const fetchNotificationCounts = async (forceRefresh = false) => {
   try {
     loadReadNotifications()
 
-    // Do NOT forceRefresh here: the 10s cache in getUnifiedNotifications is
-    // enough to collapse mount/route/event bursts into one request.
-    const unifiedResponse = await getUnifiedNotifications(1, 100, forceRefresh)
-    const approvalRows = unifiedResponse.data?.approval || []
-    const revisiRows = unifiedResponse.data?.revisi || []
+    // Sama dengan sumber data halaman notifikasi. Cache 10 detik di service
+    // menggabungkan mount/route/event burst menjadi satu request.
+    const snapshot = await getNotificationSnapshot(1, 100, forceRefresh)
+    const stockRows = snapshot.data?.stock || []
+    loadDismissedStockAlerts(new Set(stockRows.map((row) => String(row.id))))
 
-    const validIds = new Set<string>((unifiedResponse.active_ids || []).map((id) => String(id)))
-    const cleanedIds = [...readNotificationIds.value].filter((id) => validIds.has(id))
-    if (cleanedIds.length !== readNotificationIds.value.size) {
-      readNotificationIds.value = new Set(cleanedIds)
-      localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(cleanedIds))
+    const validReadIds = new Set<string>(
+      (snapshot.active_ids || []).map((id) => String(id)),
+    )
+    const validStockIds = new Set<string>(stockRows.map((row) => String(row.id)))
+
+    const cleanedReadIds = snapshot.active_ids?.length
+      ? [...readNotificationIds.value].filter((id) => validReadIds.has(id))
+      : [...readNotificationIds.value]
+    const cleanedDismissedIds = [...dismissedStockAlertIds.value].filter((id) =>
+      validStockIds.has(id),
+    )
+
+    const readChanged = cleanedReadIds.length !== readNotificationIds.value.size
+    const dismissedChanged =
+      cleanedDismissedIds.length !== dismissedStockAlertIds.value.size
+    if (readChanged) readNotificationIds.value = new Set(cleanedReadIds)
+    if (dismissedChanged)
+      dismissedStockAlertIds.value = new Set(cleanedDismissedIds)
+    if (readChanged || dismissedChanged) {
+      saveNotificationLocalState({
+        readIds: readChanged ? readNotificationIds.value : undefined,
+        dismissedIds: dismissedChanged
+          ? dismissedStockAlertIds.value
+          : undefined,
+      })
     }
 
-    const approvalUnread = approvalRows.filter(
-      (n: any) => !n.status && !readNotificationIds.value.has(String(n.id)),
-    ).length
-    const revisiUnread = revisiRows.filter(
-      (n: any) => !n.status && !readNotificationIds.value.has(String(n.id)),
-    ).length
+    const allRows = [
+      ...(snapshot.data?.approval || []),
+      ...(snapshot.data?.revisi || []),
+      ...(snapshot.data?.pending_approval || []),
+      ...(snapshot.data?.outstanding || []),
+      ...(snapshot.data?.info || []),
+      ...stockRows,
+    ]
 
-    notificationCount.value = approvalUnread + revisiUnread
+    notificationCount.value = countUnreadNotifications(
+      allRows,
+      readNotificationIds.value,
+      dismissedStockAlertIds.value,
+    )
   } catch {
     notificationCount.value = 0
   } finally {
@@ -74,6 +101,7 @@ const fetchNotificationCounts = async (forceRefresh = false) => {
 
 const handleNotificationRead = () => {
   loadReadNotifications()
+  loadDismissedStockAlerts()
   void fetchNotificationCounts()
 }
 
@@ -82,8 +110,12 @@ const handleNotificationsUpdated = () => {
 }
 
 const handleStorageChange = (e: StorageEvent) => {
-  if (e.key === NOTIFICATION_STORAGE_KEY) {
+  if (
+    e.key === READ_NOTIFICATIONS_STORAGE_KEY ||
+    e.key === DISMISSED_STOCK_ALERTS_STORAGE_KEY
+  ) {
     loadReadNotifications()
+    loadDismissedStockAlerts()
     void fetchNotificationCounts()
   }
 }

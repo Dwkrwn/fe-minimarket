@@ -51,6 +51,7 @@ import {
   type ItemNotification,
 } from "./service.item";
 import { API_BASE_URL } from "@/lib/api";
+import { finalizeNotificationAction } from "@/lib/notificationState";
 import FieldX from "@/components/field/FieldX.vue";
 
 const router = useRouter();
@@ -175,6 +176,7 @@ const handleApproval = async (status: "APPROVED" | "REVISI") => {
       await updateItemStatus(notification.value.m_items_id ?? "", status);
     }
 
+    finalizeNotificationAction(notification.value.id);
     toast.success(
       `Item ${status === "APPROVED" ? "approved" : "revised"} successfully`,
     );

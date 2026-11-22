@@ -38,6 +38,7 @@ import {
   type PINotification,
 } from "./service.pi";
 import { useAuthStore } from "@/stores/auth";
+import { finalizeNotificationAction } from "@/lib/notificationState";
 import FieldX from "@/components/field/FieldX.vue";
 
 const authStore = useAuthStore();
@@ -161,6 +162,7 @@ const handleApproval = async (status: "APPROVED" | "REVISI") => {
       );
     }
 
+    finalizeNotificationAction(notification.value.id);
     toast.success(
       `Purchase Invoice ${status === "APPROVED" ? "approved" : "revised"} successfully`,
     );
@@ -218,6 +220,7 @@ const handleReject = async () => {
       approvalCatatan.value,
     );
 
+    finalizeNotificationAction(notification.value.id);
     toast.success("Purchase Invoice berhasil di-reject");
     router.push("/notifikasi");
   } catch (error: any) {

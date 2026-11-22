@@ -2,7 +2,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore, type SessionUser } from "@/stores/auth";
-import { login, getCurrentUser } from "@/lib/api";
+import { login, getCurrentUser, notificationFunctionUrl } from "@/lib/api";
 import { toast } from "vue-sonner";
 import { useApi } from "@/composables/useApi";
 const { API_BASE_URL } = useApi();
@@ -106,7 +106,9 @@ const handleLogin = async () => {
       // Step 5: Fetch approval data from new API endpoint
       try {
         const approvalResponse = await fetch(
-          `${API_BASE_URL}/fn/m_approval/getUserApprovalData?id=${userData.id}`,
+          notificationFunctionUrl(
+            `/fn/m_approval/getUserApprovalData?id=${userData.id}`,
+          ),
           {
             method: "GET",
             headers: {

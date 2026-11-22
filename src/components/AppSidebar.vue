@@ -282,7 +282,7 @@ const staticMenuItems = [
     superAdminOnly: false,
   },
   {
-    title: "Dasbor",
+    title: "Dashboard",
     url: "/",
     icon: "LayoutDashboard",
     modul: null,
@@ -561,7 +561,7 @@ const data = computed(() => {
               notificationCount.value > 0 ? notificationCount.value : undefined,
           },
           {
-            title: "Dasbor",
+            title: "Dashboard",
             url: "/",
             icon: "LayoutDashboard",
             isActive: route.path === "/",
