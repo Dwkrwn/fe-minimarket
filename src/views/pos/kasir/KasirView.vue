@@ -94,6 +94,15 @@ const METODE: Array<{
   { value: "TRANSFER", label: "Transfer", icon: Smartphone, hint: "Mobile banking" },
 ];
 
+/** Sengaja disembunyikan di layar kasir; ubah ke true jika ingin dipakai lagi. */
+const SHOW_DISKON = false;
+/** Metode yang tidak ditampilkan sebagai pilihan bayar di kasir. */
+const HIDDEN_METODE: PaymentMethod[] = ["EDC", "TRANSFER"];
+
+const visibleMetode = computed(() =>
+  METODE.filter((option) => !HIDDEN_METODE.includes(option.value)),
+);
+
 const rupiah = (value: number | string | null | undefined) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -705,7 +714,7 @@ onMounted(loadData);
                     </Button>
                   </div>
 
-                  <div class="flex items-center gap-1.5">
+                  <div v-if="SHOW_DISKON" class="flex items-center gap-1.5">
                     <span class="text-[11px] text-muted-foreground">Diskon</span>
                     <Input
                       :model-value="line.diskon"
@@ -735,7 +744,10 @@ onMounted(loadData);
                 <span>Subtotal</span>
                 <span>{{ rupiah(subtotal) }}</span>
               </div>
-              <div class="flex items-center justify-between text-muted-foreground">
+              <div
+                v-if="SHOW_DISKON"
+                class="flex items-center justify-between text-muted-foreground"
+              >
                 <span>Diskon</span>
                 <span class="text-rose-600 dark:text-rose-400">-{{ rupiah(totalDiskon) }}</span>
               </div>
@@ -747,7 +759,7 @@ onMounted(loadData);
 
             <div class="mt-3 grid grid-cols-2 gap-2">
               <button
-                v-for="option in METODE"
+                v-for="option in visibleMetode"
                 :key="option.value"
                 type="button"
                 class="flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition"

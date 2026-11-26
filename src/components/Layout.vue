@@ -44,6 +44,9 @@ const pageTitle = computed(
 // Layar kasir tampil fullscreen: sidebar & header disembunyikan agar fokus.
 const isFullscreen = computed(() => route.meta.fullscreen === true);
 
+/** Ikon notifikasi di header disembunyikan; user memakai menu Notifikasi di sidebar. */
+const SHOW_HEADER_NOTIFICATION = false;
+
 // Tanggal & jam dalam bahasa Indonesia
 const currentDateTime = ref(new Date());
 const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -198,6 +201,7 @@ watch(
 
           <div class="flex items-center gap-1.5">
             <button
+              v-if="SHOW_HEADER_NOTIFICATION"
               type="button"
               class="relative flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
               title="Buka notifikasi"
