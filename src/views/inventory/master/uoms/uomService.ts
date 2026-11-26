@@ -42,6 +42,21 @@ export async function getUoms(search?: string): Promise<Uom[]> {
   return res.data || [];
 }
 
+export async function getUomById(id: string): Promise<Uom> {
+  try {
+    const res = await apiCall<ApiResponse<Uom>>(`${BASE_PATH}/${id}`, {
+      method: "GET",
+    });
+    if (res.data) return res.data;
+  } catch {
+    // fallback if GET by id endpoint not present
+  }
+  const all = await getUoms();
+  const match = all.find((u) => u.id === id);
+  if (!match) throw new Error("Data Satuan & Konversi tidak ditemukan");
+  return match;
+}
+
 export async function createUom(payload: UomPayload): Promise<Uom> {
   const res = await apiCall<ApiResponse<Uom>>(BASE_PATH, {
     method: "POST",

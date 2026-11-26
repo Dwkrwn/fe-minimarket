@@ -50,6 +50,21 @@ export async function getCategoryRacks(query: CategoryRackQuery = {}): Promise<C
   return res.data || [];
 }
 
+export async function getCategoryRackById(id: string): Promise<CategoryRack> {
+  try {
+    const res = await apiCall<ApiResponse<CategoryRack>>(`${BASE_PATH}/${id}`, {
+      method: "GET",
+    });
+    if (res.data) return res.data;
+  } catch {
+    // fallback if GET by id endpoint not present
+  }
+  const all = await getCategoryRacks();
+  const found = all.find((r) => r.id === id);
+  if (!found) throw new Error("Data Kategori / Rak tidak ditemukan");
+  return found;
+}
+
 export async function createCategoryRack(payload: CategoryRackPayload): Promise<CategoryRack> {
   const res = await apiCall<ApiResponse<CategoryRack>>(BASE_PATH, {
     method: "POST",

@@ -23,7 +23,7 @@
           v-if="canManage"
           size="sm"
           class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm"
-          @click="openCreateModal"
+          @click="router.push('/inventory/master/uoms/form')"
         >
           <Plus class="w-4 h-4" />
           <span>Tambah Satuan</span>
@@ -130,7 +130,7 @@
               <th class="px-4 py-3.5 text-center">Rasio Konversi</th>
               <th class="px-4 py-3.5">Catatan</th>
               <th class="px-4 py-3.5 text-center">Status</th>
-              <th v-if="canManage" class="px-4 py-3.5 text-center">Aksi</th>
+              <th class="px-4 py-3.5 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -192,18 +192,29 @@
                   {{ uom.is_active ? 'Aktif' : 'Non-aktif' }}
                 </Badge>
               </td>
-              <td v-if="canManage" class="px-4 py-3.5 text-center">
+              <td class="px-4 py-3.5 text-center">
                 <div class="flex items-center justify-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
+                    class="h-8 w-8 p-0 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    title="Lihat Detail Satuan"
+                    @click="router.push(`/inventory/master/uoms/view/${uom.id}`)"
+                  >
+                    <Eye class="w-4 h-4" />
+                  </Button>
+                  <Button
+                    v-if="canManage"
+                    variant="ghost"
+                    size="sm"
                     class="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                     title="Edit satuan"
-                    @click="openEditModal(uom)"
+                    @click="router.push(`/inventory/master/uoms/form/${uom.id}`)"
                   >
                     <Edit class="w-4 h-4" />
                   </Button>
                   <Button
+                    v-if="canManage"
                     variant="ghost"
                     size="sm"
                     class="h-8 w-8 p-0 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
@@ -219,73 +230,6 @@
         </table>
       </div>
     </Card>
-
-    <!-- Form Dialog -->
-    <GlobalDialog
-      v-model:open="isFormModalOpen"
-      :title="isEditMode ? 'Edit Satuan & Konversi' : 'Tambah Satuan & Konversi'"
-      :description="isEditMode ? 'Perbarui rasio konversi satuan beli ke Pcs.' : 'Definisikan satuan beli dan rasio konversinya ke Pcs.'"
-    >
-      <form @submit.prevent="handleSubmitForm" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Kode UOM <span class="text-rose-500">*</span>
-            </label>
-            <Input v-model="formData.kode_uom" placeholder="Contoh: KARDUS-24" required class="font-mono text-sm" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Nama Satuan <span class="text-rose-500">*</span>
-            </label>
-            <Input v-model="formData.nama_uom" placeholder="Contoh: Kardus 24 Pcs" required />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Satuan Dasar <span class="text-rose-500">*</span>
-            </label>
-            <Input v-model="formData.satuan_dasar" placeholder="Pcs" required />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Satuan Beli <span class="text-rose-500">*</span>
-            </label>
-            <Input v-model="formData.satuan_beli" placeholder="Kardus / Dus / Pack" required />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Rasio (Pcs) <span class="text-rose-500">*</span>
-            </label>
-            <Input v-model.number="formData.rasio_konversi" type="number" min="1" step="1" required class="font-mono text-sm" />
-          </div>
-        </div>
-
-        <div class="p-3 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
-          Preview: <span class="font-semibold">1 {{ formData.satuan_beli || "satuan beli" }} = {{ Number(formData.rasio_konversi) || 0 }} {{ formData.satuan_dasar || "Pcs" }}</span>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan</label>
-          <Input v-model="formData.catatan" placeholder="Keterangan opsional..." />
-        </div>
-
-        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-          <input v-model="formData.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-          Satuan aktif dan bisa dipakai barang baru
-        </label>
-
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <Button type="button" variant="outline" @click="isFormModalOpen = false">Batal</Button>
-          <Button type="submit" :disabled="isSubmitting" class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5">
-            <RefreshCw v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-            <span>{{ isEditMode ? 'Simpan Perubahan' : 'Simpan Satuan' }}</span>
-          </Button>
-        </div>
-      </form>
-    </GlobalDialog>
 
     <!-- Delete Dialog -->
     <GlobalDialog
@@ -315,11 +259,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import {
   Archive,
   Boxes,
   Calculator,
   Edit,
+  Eye,
   Hash,
   Plus,
   RefreshCw,
@@ -336,41 +282,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import GlobalDialog from "@/components/dialog/GlobalDialog.vue";
 import { useAuthStore } from "@/stores/auth";
 import {
-  createUom,
   deleteUom,
   getUoms,
-  updateUom,
   type Uom,
 } from "./uomService";
 
 type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const canManage = computed(() => authStore.isManager);
 
 const uoms = ref<Uom[]>([]);
 const loading = ref(false);
-const isSubmitting = ref(false);
 const isDeleting = ref(false);
 
 const searchQuery = ref("");
 const statusFilter = ref<StatusFilter>("ALL");
 
-const isFormModalOpen = ref(false);
-const isEditMode = ref(false);
-const currentEditId = ref<string | null>(null);
 const isDeleteDialogOpen = ref(false);
 const uomToDelete = ref<Uom | null>(null);
-
-const formData = ref({
-  kode_uom: "",
-  nama_uom: "",
-  satuan_dasar: "Pcs",
-  satuan_beli: "",
-  rasio_konversi: 1,
-  catatan: "",
-  is_active: true,
-});
 
 const filteredUoms = computed(() =>
   uoms.value.filter((uom) => {
@@ -409,76 +340,6 @@ function resetFilters() {
   searchQuery.value = "";
   statusFilter.value = "ALL";
   loadUoms();
-}
-
-function openCreateModal() {
-  isEditMode.value = false;
-  currentEditId.value = null;
-  formData.value = {
-    kode_uom: "",
-    nama_uom: "",
-    satuan_dasar: "Pcs",
-    satuan_beli: "",
-    rasio_konversi: 1,
-    catatan: "",
-    is_active: true,
-  };
-  isFormModalOpen.value = true;
-}
-
-function openEditModal(uom: Uom) {
-  isEditMode.value = true;
-  currentEditId.value = uom.id;
-  formData.value = {
-    kode_uom: uom.kode_uom,
-    nama_uom: uom.nama_uom,
-    satuan_dasar: uom.satuan_dasar,
-    satuan_beli: uom.satuan_beli,
-    rasio_konversi: Number(uom.rasio_konversi),
-    catatan: uom.catatan || "",
-    is_active: uom.is_active,
-  };
-  isFormModalOpen.value = true;
-}
-
-async function handleSubmitForm() {
-  if (!formData.value.kode_uom.trim() || !formData.value.nama_uom.trim() || !formData.value.satuan_beli.trim()) {
-    toast.error("Kode, nama, dan satuan beli wajib diisi");
-    return;
-  }
-  if (!formData.value.rasio_konversi || formData.value.rasio_konversi < 1) {
-    toast.error("Rasio konversi minimal 1 Pcs");
-    return;
-  }
-
-  isSubmitting.value = true;
-  try {
-    const payload = {
-      kode_uom: formData.value.kode_uom.trim(),
-      nama_uom: formData.value.nama_uom.trim(),
-      satuan_dasar: formData.value.satuan_dasar.trim() || "Pcs",
-      satuan_beli: formData.value.satuan_beli.trim(),
-      rasio_konversi: Number(formData.value.rasio_konversi),
-      catatan: formData.value.catatan.trim() || null,
-      is_active: formData.value.is_active,
-    };
-
-    if (isEditMode.value && currentEditId.value) {
-      await updateUom(currentEditId.value, payload);
-      toast.success("Satuan berhasil diperbarui");
-    } else {
-      await createUom(payload);
-      toast.success("Satuan berhasil dibuat");
-    }
-
-    isFormModalOpen.value = false;
-    await loadUoms();
-  } catch (error: any) {
-    console.error("Gagal menyimpan satuan:", error);
-    toast.error(error.message || "Gagal menyimpan satuan");
-  } finally {
-    isSubmitting.value = false;
-  }
 }
 
 function openDeleteDialog(uom: Uom) {

@@ -23,7 +23,7 @@
           v-if="canManage"
           size="sm"
           class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm"
-          @click="openCreateModal"
+          @click="router.push('/inventory/master/category-racks/form')"
         >
           <Plus class="w-4 h-4" />
           <span>Tambah Kategori / Rak</span>
@@ -133,7 +133,7 @@
               <th class="px-4 py-3.5">Lokasi / Blok</th>
               <th class="px-4 py-3.5">Catatan</th>
               <th class="px-4 py-3.5 text-center">Status</th>
-              <th v-if="canManage" class="px-4 py-3.5 text-center">Aksi</th>
+              <th class="px-4 py-3.5 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -198,18 +198,29 @@
                   {{ rack.is_active ? 'Aktif' : 'Non-aktif' }}
                 </Badge>
               </td>
-              <td v-if="canManage" class="px-4 py-3.5 text-center">
+              <td class="px-4 py-3.5 text-center">
                 <div class="flex items-center justify-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
+                    class="h-8 w-8 p-0 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    title="Lihat Detail Zona"
+                    @click="router.push(`/inventory/master/category-racks/view/${rack.id}`)"
+                  >
+                    <Eye class="w-4 h-4" />
+                  </Button>
+                  <Button
+                    v-if="canManage"
+                    variant="ghost"
+                    size="sm"
                     class="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                     title="Edit zona"
-                    @click="openEditModal(rack)"
+                    @click="router.push(`/inventory/master/category-racks/form/${rack.id}`)"
                   >
                     <Edit class="w-4 h-4" />
                   </Button>
                   <Button
+                    v-if="canManage"
                     variant="ghost"
                     size="sm"
                     class="h-8 w-8 p-0 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
@@ -225,67 +236,6 @@
         </table>
       </div>
     </Card>
-
-    <!-- Form Dialog -->
-    <GlobalDialog
-      v-model:open="isFormModalOpen"
-      :title="isEditMode ? 'Edit Kategori / Rak' : 'Tambah Kategori / Rak'"
-      :description="isEditMode ? 'Perbarui identitas zona penyimpanan.' : 'Tentukan kode, nama, dan tipe zona penyimpanan baru.'"
-    >
-      <form @submit.prevent="handleSubmitForm" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Kode Zona <span class="text-rose-500">*</span>
-            </label>
-            <Input v-model="formData.kode" placeholder="Contoh: RAK-A01 / GDG-01" required class="font-mono text-sm" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Nama Zona <span class="text-rose-500">*</span>
-            </label>
-            <Input v-model="formData.nama" placeholder="Contoh: Rak Minuman / Gudang Kering" required />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Tipe Zona <span class="text-rose-500">*</span>
-            </label>
-            <select
-              v-model="formData.tipe_zona"
-              class="w-full text-sm rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="RAK">RAK - Pajangan Toko</option>
-              <option value="GUDANG">GUDANG - Penyimpanan Belakang</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Lokasi / Blok</label>
-            <Input v-model="formData.lokasi" placeholder="Contoh: Lorong 1 / Blok B2" />
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan</label>
-          <Input v-model="formData.catatan" placeholder="Keterangan opsional..." />
-        </div>
-
-        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-          <input v-model="formData.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-          Zona aktif dan bisa dipakai penempatan barang
-        </label>
-
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <Button type="button" variant="outline" @click="isFormModalOpen = false">Batal</Button>
-          <Button type="submit" :disabled="isSubmitting" class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5">
-            <RefreshCw v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-            <span>{{ isEditMode ? 'Simpan Perubahan' : 'Simpan Zona' }}</span>
-          </Button>
-        </div>
-      </form>
-    </GlobalDialog>
 
     <!-- Delete Dialog -->
     <GlobalDialog
@@ -315,9 +265,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import {
   Archive,
   Edit,
+  Eye,
   Hash,
   Layers,
   MapPin,
@@ -339,22 +291,20 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GlobalDialog from "@/components/dialog/GlobalDialog.vue";
 import { useAuthStore } from "@/stores/auth";
 import {
-  createCategoryRack,
   deleteCategoryRack,
   getCategoryRacks,
-  updateCategoryRack,
   type CategoryRack,
   type ZoneType,
 } from "./categoryRackService";
 
 type TabValue = "SEMUA" | ZoneType;
 
+const router = useRouter();
 const authStore = useAuthStore();
 const canManage = computed(() => authStore.isManager);
 
 const racks = ref<CategoryRack[]>([]);
 const loading = ref(false);
-const isSubmitting = ref(false);
 const isDeleting = ref(false);
 
 const searchQuery = ref("");
@@ -366,20 +316,8 @@ const tabs: Array<{ label: string; value: TabValue }> = [
   { label: "Gudang", value: "GUDANG" },
 ];
 
-const isFormModalOpen = ref(false);
-const isEditMode = ref(false);
-const currentEditId = ref<string | null>(null);
 const isDeleteDialogOpen = ref(false);
 const rackToDelete = ref<CategoryRack | null>(null);
-
-const formData = ref({
-  kode: "",
-  nama: "",
-  tipe_zona: "RAK" as ZoneType,
-  lokasi: "",
-  catatan: "",
-  is_active: true,
-});
 
 const filteredRacks = computed(() =>
   racks.value.filter((rack) => activeTab.value === "SEMUA" || rack.tipe_zona === activeTab.value),
@@ -411,69 +349,6 @@ function resetFilters() {
   searchQuery.value = "";
   activeTab.value = "SEMUA";
   loadRacks();
-}
-
-function openCreateModal() {
-  isEditMode.value = false;
-  currentEditId.value = null;
-  formData.value = {
-    kode: "",
-    nama: "",
-    tipe_zona: activeTab.value === "GUDANG" ? "GUDANG" : "RAK",
-    lokasi: "",
-    catatan: "",
-    is_active: true,
-  };
-  isFormModalOpen.value = true;
-}
-
-function openEditModal(rack: CategoryRack) {
-  isEditMode.value = true;
-  currentEditId.value = rack.id;
-  formData.value = {
-    kode: rack.kode,
-    nama: rack.nama,
-    tipe_zona: rack.tipe_zona,
-    lokasi: rack.lokasi || "",
-    catatan: rack.catatan || "",
-    is_active: rack.is_active,
-  };
-  isFormModalOpen.value = true;
-}
-
-async function handleSubmitForm() {
-  if (!formData.value.kode.trim() || !formData.value.nama.trim()) {
-    toast.error("Kode dan nama zona wajib diisi");
-    return;
-  }
-
-  isSubmitting.value = true;
-  try {
-    const payload = {
-      kode: formData.value.kode.trim(),
-      nama: formData.value.nama.trim(),
-      tipe_zona: formData.value.tipe_zona,
-      lokasi: formData.value.lokasi.trim() || null,
-      catatan: formData.value.catatan.trim() || null,
-      is_active: formData.value.is_active,
-    };
-
-    if (isEditMode.value && currentEditId.value) {
-      await updateCategoryRack(currentEditId.value, payload);
-      toast.success("Kategori / rak berhasil diperbarui");
-    } else {
-      await createCategoryRack(payload);
-      toast.success("Kategori / rak berhasil dibuat");
-    }
-
-    isFormModalOpen.value = false;
-    await loadRacks();
-  } catch (error: any) {
-    console.error("Gagal menyimpan kategori / rak:", error);
-    toast.error(error.message || "Gagal menyimpan kategori / rak");
-  } finally {
-    isSubmitting.value = false;
-  }
 }
 
 function openDeleteDialog(rack: CategoryRack) {

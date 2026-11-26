@@ -390,6 +390,27 @@ const router = createRouter({
           },
         },
         {
+          path: "/inventory/master/items/form/:id?",
+          name: "MinimarketItemForm",
+          component: () =>
+            import("@/views/inventory/master/m_items/MinimarketItemForm.vue"),
+          meta: {
+            title: "Form Barang Minimarket",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/master/items/view/:id",
+          name: "MinimarketItemView",
+          component: () =>
+            import("@/views/inventory/master/m_items/MinimarketItemForm.vue"),
+          meta: {
+            title: "Detail Barang Minimarket",
+            requiresAuth: true,
+            readOnly: true,
+          },
+        },
+        {
           path: "/inventory/master/m_items",
           name: "MinimarketItemsLegacyPath",
           component: () =>
@@ -398,6 +419,20 @@ const router = createRouter({
             title: "Daftar Barang Minimarket",
             requiresAuth: true,
           },
+        },
+        {
+          path: "/inventory/master/m_items/form/:id?",
+          redirect: (to) => ({
+            name: "MinimarketItemForm",
+            params: to.params,
+          }),
+        },
+        {
+          path: "/inventory/master/m_items/view/:id",
+          redirect: (to) => ({
+            name: "MinimarketItemView",
+            params: to.params,
+          }),
         },
 
         // Inventory 1.2 - Kategori & Rak (zona RAK / GUDANG)
@@ -412,9 +447,44 @@ const router = createRouter({
           },
         },
         {
+          path: "/inventory/master/category-racks/form/:id?",
+          name: "InventoryCategoryRackForm",
+          component: () =>
+            import("@/views/inventory/master/category_racks/CategoryRackForm.vue"),
+          meta: {
+            title: "Form Kategori & Rak",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/master/category-racks/view/:id",
+          name: "InventoryCategoryRackView",
+          component: () =>
+            import("@/views/inventory/master/category_racks/CategoryRackForm.vue"),
+          meta: {
+            title: "Detail Kategori & Rak",
+            requiresAuth: true,
+            readOnly: true,
+          },
+        },
+        {
           path: "/inventory/master/category_racks",
           name: "InventoryCategoryRacksUnderscore",
           redirect: { name: "InventoryCategoryRacks" },
+        },
+        {
+          path: "/inventory/master/category_racks/form/:id?",
+          redirect: (to) => ({
+            name: "InventoryCategoryRackForm",
+            params: to.params,
+          }),
+        },
+        {
+          path: "/inventory/master/category_racks/view/:id",
+          redirect: (to) => ({
+            name: "InventoryCategoryRackView",
+            params: to.params,
+          }),
         },
 
         // Inventory 1.3 - Satuan & Konversi (multi-UOM)
@@ -429,8 +499,43 @@ const router = createRouter({
           },
         },
         {
+          path: "/inventory/master/uoms/form/:id?",
+          name: "InventoryUomForm",
+          component: () =>
+            import("@/views/inventory/master/uoms/UomForm.vue"),
+          meta: {
+            title: "Form Satuan & Konversi",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/inventory/master/uoms/view/:id",
+          name: "InventoryUomView",
+          component: () =>
+            import("@/views/inventory/master/uoms/UomForm.vue"),
+          meta: {
+            title: "Detail Satuan & Konversi",
+            requiresAuth: true,
+            readOnly: true,
+          },
+        },
+        {
           path: "/inventory/master/m_uoms",
           redirect: { name: "InventoryUoms" },
+        },
+        {
+          path: "/inventory/master/m_uoms/form/:id?",
+          redirect: (to) => ({
+            name: "InventoryUomForm",
+            params: to.params,
+          }),
+        },
+        {
+          path: "/inventory/master/m_uoms/view/:id",
+          redirect: (to) => ({
+            name: "InventoryUomView",
+            params: to.params,
+          }),
         },
 
         // Inventory 1.4 - Batas Pemesanan Barang (ROP)

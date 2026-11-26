@@ -78,6 +78,7 @@ export interface CreateItemPayload {
 }
 
 export interface UpdateItemPayload {
+  barcode?: string;
   nama_barang?: string;
   category_rack_id?: string;
   uom_id?: string;
@@ -85,6 +86,19 @@ export interface UpdateItemPayload {
   harga_jual?: number;
   catatan?: string;
   is_active?: boolean;
+  lead_time_days?: number;
+  safety_stock_pcs?: number;
+  max_stock_pcs?: number;
+}
+
+/**
+ * Fetch a single item by ID
+ */
+export async function getMinimarketItemById(id: string): Promise<MinimarketItem> {
+  const res = await apiCall<ApiResponse<MinimarketItem>>(`${apiPath("/v1/inventory/items")}/${id}`, {
+    method: "GET",
+  });
+  return res.data;
 }
 
 /**

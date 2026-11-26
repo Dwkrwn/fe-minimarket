@@ -32,7 +32,7 @@
           v-if="canManage"
           size="sm"
           class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm"
-          @click="openCreateModal"
+          @click="router.push('/inventory/master/items/form')"
         >
           <Plus class="w-4 h-4" />
           <span>Tambah Barang Baru</span>
@@ -174,7 +174,7 @@
               <th scope="col" class="px-4 py-3.5 text-right">Harga Jual</th>
               <th scope="col" class="px-4 py-3.5 text-center">Posisi Stok (Pcs)</th>
               <th scope="col" class="px-4 py-3.5 text-center">Status</th>
-              <th v-if="canManage" scope="col" class="px-4 py-3.5 text-center">Aksi</th>
+              <th scope="col" class="px-4 py-3.5 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -307,18 +307,29 @@
               </td>
 
               <!-- Aksi -->
-              <td v-if="canManage" class="px-4 py-3.5 text-center">
+              <td class="px-4 py-3.5 text-center">
                 <div class="flex items-center justify-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
+                    class="h-8 w-8 p-0 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    @click="router.push(`/inventory/master/items/view/${item.id}`)"
+                    title="Lihat Detail Barang"
+                  >
+                    <Eye class="w-4 h-4" />
+                  </Button>
+                  <Button
+                    v-if="canManage"
+                    variant="ghost"
+                    size="sm"
                     class="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                    @click="openEditModal(item)"
+                    @click="router.push(`/inventory/master/items/form/${item.id}`)"
                     title="Edit Barang"
                   >
                     <Edit class="w-4 h-4" />
                   </Button>
                   <Button
+                    v-if="canManage"
                     variant="ghost"
                     size="sm"
                     class="h-8 w-8 p-0 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
@@ -335,166 +346,7 @@
       </div>
     </Card>
 
-    <!-- 5. MODAL FORM: Tambah / Edit Barang -->
-    <GlobalDialog
-      v-model:open="isFormModalOpen"
-      :title="isEditMode ? 'Edit Data Barang Minimarket' : 'Tambah Barang Baru'"
-      :description="isEditMode ? 'Perbarui informasi produk dan harga jual.' : 'Daftarkan barcode, nama produk, kategori, dan stok pengaman awal.'"
-    >
-      <form @submit.prevent="handleSubmitForm" class="space-y-4">
-        <!-- Barcode & Nama Barang -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Barcode / SKU <span class="text-rose-500">*</span>
-            </label>
-            <div class="relative">
-              <Input
-                v-model="formData.barcode"
-                placeholder="Scan barcode (contoh: 899...)"
-                :disabled="isEditMode"
-                required
-                class="font-mono text-sm"
-              />
-              <button
-                v-if="!isEditMode"
-                type="button"
-                @click="generateRandomBarcode"
-                class="absolute right-2 top-2 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded"
-              >
-                Acak
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Nama Produk <span class="text-rose-500">*</span>
-            </label>
-            <Input
-              v-model="formData.nama_barang"
-              placeholder="Contoh: Susu Ultra Milk 250ml Plain"
-              required
-            />
-          </div>
-        </div>
-
-        <!-- Kategori/Rak & UOM Satuan -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Kategori & Rak Penempatan <span class="text-rose-500">*</span>
-            </label>
-            <select
-              v-model="formData.category_rack_id"
-              required
-              class="w-full text-sm rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="" disabled>Pilih Kategori/Rak</option>
-              <option v-for="rack in categoryRacks" :key="rack.id" :value="rack.id">
-                [{{ rack.tipe_zona }}] {{ rack.nama }} ({{ rack.lokasi || '-' }})
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Satuan Beli & Konversi (UOM) <span class="text-rose-500">*</span>
-            </label>
-            <select
-              v-model="formData.uom_id"
-              required
-              class="w-full text-sm rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="" disabled>Pilih Satuan UOM</option>
-              <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
-                {{ uom.nama_uom }} (1 {{ uom.satuan_beli }} = {{ uom.rasio_konversi }} Pcs)
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Harga Modal & Harga Jual -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Harga Modal / HPP (Rp) <span class="text-rose-500">*</span>
-            </label>
-            <Input
-              type="number"
-              v-model.number="formData.harga_modal"
-              min="0"
-              step="100"
-              required
-              class="font-mono text-sm"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Harga Jual Eceran Kasir (Rp) <span class="text-rose-500">*</span>
-            </label>
-            <Input
-              type="number"
-              v-model.number="formData.harga_jual"
-              min="0"
-              step="100"
-              required
-              class="font-mono text-sm"
-            />
-          </div>
-        </div>
-
-        <!-- ROP / Safety Stock Setting (Hanya saat tambah baru) -->
-        <div v-if="!isEditMode" class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800 space-y-2">
-          <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">
-            Pengaturan Batas Stok Kulakan Otomatis (Auto-PR / ROP)
-          </p>
-          <div class="grid grid-cols-3 gap-2">
-            <div>
-              <label class="text-[11px] text-slate-500">Lead Time (Hari)</label>
-              <Input type="number" v-model.number="formData.lead_time_days" min="1" class="text-xs font-mono" />
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-500">Safety Stock (Pcs)</label>
-              <Input type="number" v-model.number="formData.safety_stock_pcs" min="0" class="text-xs font-mono" />
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-500">Max Kapasitas (Pcs)</label>
-              <Input type="number" v-model.number="formData.max_stock_pcs" min="1" class="text-xs font-mono" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Catatan -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Catatan Tambahan
-          </label>
-          <Input
-            v-model="formData.catatan"
-            placeholder="Keterangan opsional produk..."
-          />
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <Button type="button" variant="outline" @click="isFormModalOpen = false">
-            Batal
-          </Button>
-          <Button
-            type="submit"
-            :disabled="isSubmitting"
-            class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5"
-          >
-            <RefreshCw v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-            <span>{{ isEditMode ? 'Simpan Perubahan' : 'Daftarkan Barang' }}</span>
-          </Button>
-        </div>
-      </form>
-    </GlobalDialog>
-
-    <!-- 6. MODAL KONFIRMASI HAPUS -->
+    <!-- 5. MODAL KONFIRMASI HAPUS -->
     <GlobalDialog
       v-model:open="isDeleteDialogOpen"
       title="Hapus Barang Minimarket"
@@ -530,6 +382,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   Package,
   Store,
@@ -540,6 +393,7 @@ import {
   Search,
   Barcode,
   Copy,
+  Eye,
   Edit,
   Trash2,
 } from "lucide-vue-next";
@@ -557,14 +411,13 @@ import {
   getMinimarketItemByBarcode,
   getCategoryRacks,
   getUoms,
-  createMinimarketItem,
-  updateMinimarketItem,
   deleteMinimarketItem,
   type MinimarketItem,
   type CategoryRack,
   type Uom,
 } from "./minimarketItemService";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const canManage = computed(() => authStore.isManager);
 
@@ -573,7 +426,6 @@ const items = ref<MinimarketItem[]>([]);
 const categoryRacks = ref<CategoryRack[]>([]);
 const uoms = ref<Uom[]>([]);
 const loading = ref(false);
-const isSubmitting = ref(false);
 const isDeleting = ref(false);
 
 // Filter
@@ -581,30 +433,12 @@ const searchQuery = ref("");
 const selectedRackFilter = ref("");
 const scanNotice = ref<string | null>(null);
 
-// Dialog states
-const isFormModalOpen = ref(false);
-const isEditMode = ref(false);
-const currentEditId = ref<string | null>(null);
-
+// Dialog state delete
 const isDeleteDialogOpen = ref(false);
 const itemToDelete = ref<MinimarketItem | null>(null);
 
-// Form model
-const formData = ref({
-  barcode: "",
-  nama_barang: "",
-  category_rack_id: "",
-  uom_id: "",
-  harga_modal: 0,
-  harga_jual: 0,
-  catatan: "",
-  lead_time_days: 3,
-  safety_stock_pcs: 10,
-  max_stock_pcs: 100,
-});
-
 // Computed Metrics
-const columnCount = computed(() => (canManage.value ? 8 : 6));
+const columnCount = computed(() => (canManage.value ? 8 : 7));
 
 const activeItemsCount = computed(() => {
   return items.value.filter((i) => i.is_active).length;
@@ -663,12 +497,6 @@ function copyBarcode(barcode: string) {
   toast.success(`Barcode ${barcode} disalin ke clipboard!`);
 }
 
-function generateRandomBarcode() {
-  const prefix = "899";
-  const randomPart = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-  formData.value.barcode = prefix + randomPart;
-}
-
 // API Loaders
 async function loadAllData() {
   loading.value = true;
@@ -712,88 +540,6 @@ function resetFilters() {
   selectedRackFilter.value = "";
   scanNotice.value = null;
   loadAllData();
-}
-
-// Modal Handlers
-function openCreateModal() {
-  isEditMode.value = false;
-  currentEditId.value = null;
-  formData.value = {
-    barcode: "",
-    nama_barang: "",
-    category_rack_id: categoryRacks.value[0]?.id || "",
-    uom_id: uoms.value[0]?.id || "",
-    harga_modal: 0,
-    harga_jual: 0,
-    catatan: "",
-    lead_time_days: 3,
-    safety_stock_pcs: 10,
-    max_stock_pcs: 100,
-  };
-  generateRandomBarcode();
-  isFormModalOpen.value = true;
-}
-
-function openEditModal(item: MinimarketItem) {
-  isEditMode.value = true;
-  currentEditId.value = item.id;
-  formData.value = {
-    barcode: item.barcode,
-    nama_barang: item.nama_barang,
-    category_rack_id: item.category_rack_id,
-    uom_id: item.uom_id,
-    harga_modal: Number(item.harga_modal),
-    harga_jual: Number(item.harga_jual),
-    catatan: item.catatan || "",
-    lead_time_days: 3,
-    safety_stock_pcs: 10,
-    max_stock_pcs: 100,
-  };
-  isFormModalOpen.value = true;
-}
-
-async function handleSubmitForm() {
-  if (!formData.value.nama_barang || !formData.value.category_rack_id || !formData.value.uom_id) {
-    toast.error("Mohon lengkapi seluruh kolom wajib");
-    return;
-  }
-
-  isSubmitting.value = true;
-  try {
-    if (isEditMode.value && currentEditId.value) {
-      await updateMinimarketItem(currentEditId.value, {
-        nama_barang: formData.value.nama_barang,
-        category_rack_id: formData.value.category_rack_id,
-        uom_id: formData.value.uom_id,
-        harga_modal: formData.value.harga_modal,
-        harga_jual: formData.value.harga_jual,
-        catatan: formData.value.catatan,
-      });
-      toast.success("Data barang berhasil diperbarui!");
-    } else {
-      await createMinimarketItem({
-        barcode: formData.value.barcode,
-        nama_barang: formData.value.nama_barang,
-        category_rack_id: formData.value.category_rack_id,
-        uom_id: formData.value.uom_id,
-        harga_modal: formData.value.harga_modal,
-        harga_jual: formData.value.harga_jual,
-        catatan: formData.value.catatan,
-        lead_time_days: formData.value.lead_time_days,
-        safety_stock_pcs: formData.value.safety_stock_pcs,
-        max_stock_pcs: formData.value.max_stock_pcs,
-      });
-      toast.success("Barang baru berhasil didaftarkan!");
-    }
-
-    isFormModalOpen.value = false;
-    await loadAllData();
-  } catch (error: any) {
-    console.error("Gagal menyimpan barang:", error);
-    toast.error(error.message || "Gagal menyimpan data barang");
-  } finally {
-    isSubmitting.value = false;
-  }
 }
 
 function openDeleteDialog(item: MinimarketItem) {
