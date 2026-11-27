@@ -50,6 +50,38 @@ export async function getCategoryRacks(query: CategoryRackQuery = {}): Promise<C
   return res.data || [];
 }
 
+export async function getNextCategoryRackCode(tipe_zona: ZoneType): Promise<string> {
+  try {
+    const res = await apiCall<ApiResponse<{ kode: string }>>(`${BASE_PATH}/next-code?tipe_zona=${tipe_zona}`, {
+      method: "GET",
+    });
+    if (res.data?.kode) return res.data.kode;
+  } catch (err) {
+    console.warn("Gagal mengambil kode berikutnya dari endpoint, menggunakan kalkulasi lokal:", err);
+  }
+
+  // Fallback lokal jika endpoint belum tersedia (First Missing Gap)
+  try {
+    const all = await getCategoryRacks({ tipe_zona });
+    const prefix = tipe_zona === "GUDANG" ? "GDG" : "RAK";
+    const regex = new RegExp(`^${prefix}-(\\d+)$`, "i");
+    const usedNumbers = new Set<number>();
+    for (const r of all) {
+      const match = r.kode ? r.kode.match(regex) : null;
+      if (match && match[1]) {
+        usedNumbers.add(parseInt(match[1], 10));
+      }
+    }
+    let nextNum = 1;
+    while (usedNumbers.has(nextNum)) {
+      nextNum++;
+    }
+    return `${prefix}-${String(nextNum).padStart(3, "0")}`;
+  } catch {
+    return tipe_zona === "GUDANG" ? "GDG-001" : "RAK-001";
+  }
+}
+
 export async function getCategoryRackById(id: string): Promise<CategoryRack> {
   try {
     const res = await apiCall<ApiResponse<CategoryRack>>(`${BASE_PATH}/${id}`, {
