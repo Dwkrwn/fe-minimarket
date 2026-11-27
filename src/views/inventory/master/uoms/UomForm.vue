@@ -97,11 +97,14 @@
                 </label>
                 <Input
                   v-model="form.kode_uom"
-                  placeholder="Contoh: KARDUS-24"
-                  :disabled="readOnly"
+                  :placeholder="dynamicPlaceholder"
+                  readonly
                   required
-                  class="font-mono text-sm"
+                  class="font-mono text-sm bg-slate-50 dark:bg-slate-900/60 cursor-default select-all"
                 />
+                <span class="text-[11px] text-slate-400 mt-1 block">
+                  Kode otomatis terisi dari sistem saat mengetik satuan beli.
+                </span>
               </div>
 
               <div>
@@ -110,10 +113,13 @@
                 </label>
                 <Input
                   v-model="form.nama_uom"
-                  placeholder="Contoh: Kardus 24 Pcs"
+                  placeholder="Contoh: Dus 24 Pcs"
                   :disabled="readOnly"
                   required
                 />
+                <span class="text-[11px] text-slate-400 mt-1 block">
+                  Nama deskriptif kemasan untuk katalog dan cetak PO.
+                </span>
               </div>
             </div>
           </CardContent>
@@ -153,7 +159,8 @@
                 </label>
                 <Input
                   v-model="form.satuan_beli"
-                  placeholder="Kardus / Dus / Pack"
+                  @input="handleSatuanBeliChange"
+                  placeholder="Contoh: Dus / Kardus / Lusin / Pack"
                   :disabled="readOnly"
                   required
                 />
@@ -166,6 +173,7 @@
                 </label>
                 <Input
                   v-model.number="form.rasio_konversi"
+                  @input="handleRasioChange"
                   type="number"
                   min="1"
                   step="1"
@@ -345,6 +353,7 @@ import { useAuthStore } from "@/stores/auth";
 
 import {
   getUomById,
+  getNextUomCode,
   createUom,
   updateUom,
   type Uom,
@@ -362,7 +371,10 @@ const readOnly = computed(() => Boolean(route.meta.readOnly));
 // State
 const loading = ref(false);
 const isSubmitting = ref(false);
+const isGeneratingCode = ref(false);
 const uom = ref<Uom | null>(null);
+
+let debounceTimer: any = null;
 
 // Form model
 const form = ref({
@@ -374,6 +386,53 @@ const form = ref({
   catatan: "",
   is_active: true,
 });
+
+const dynamicPlaceholder = computed(() => {
+  const beli = form.value.satuan_beli.trim();
+  return beli
+    ? `Contoh: ${beli.toUpperCase().replace(/[^A-Z0-9]/g, "")}-001`
+    : "Otomatis mengikuti satuan beli...";
+});
+
+async function handleSatuanBeliChange() {
+  if (isEdit.value || readOnly.value) return;
+
+  autoSuggestNama();
+
+  const text = form.value.satuan_beli.trim();
+  if (!text) {
+    form.value.kode_uom = "";
+    return;
+  }
+
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(async () => {
+    isGeneratingCode.value = true;
+    try {
+      const code = await getNextUomCode(text);
+      form.value.kode_uom = code;
+    } catch (err) {
+      console.error("Gagal generate kode UOM:", err);
+    } finally {
+      isGeneratingCode.value = false;
+    }
+  }, 250);
+}
+
+function autoSuggestNama() {
+  if (isEdit.value || readOnly.value) return;
+  const beli = form.value.satuan_beli.trim();
+  if (beli) {
+    const dasar = form.value.satuan_dasar.trim() || "Pcs";
+    const rasio = form.value.rasio_konversi || 1;
+    form.value.nama_uom = `${beli} ${rasio} ${dasar}`;
+  }
+}
+
+function handleRasioChange() {
+  if (isEdit.value || readOnly.value) return;
+  autoSuggestNama();
+}
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return "-";
@@ -389,7 +448,12 @@ function formatDate(dateStr?: string): string {
 
 // Load detail satuan jika mode edit / view
 async function load() {
-  if (!uomId.value) return;
+  if (!uomId.value) {
+    if (form.value.satuan_beli) {
+      await handleSatuanBeliChange();
+    }
+    return;
+  }
   loading.value = true;
   try {
     const data = await getUomById(uomId.value);
