@@ -59,6 +59,17 @@ const MODULE_LABELS: Record<string, string> = {
   OTHER: "Lainnya",
 };
 
+/** Urutan modul di sidebar. POS sengaja diberi rank paling besar agar selalu di bawah. */
+const MODULE_ORDER: Record<string, number> = {
+  SETUP: 0, // Pengaturan
+  PURCHASING: 1,
+  INVENTORY: 2,
+  POS: Number.MAX_SAFE_INTEGER, // Transaksi (POS)
+};
+
+const moduleOrderRank = (modul: string): number =>
+  MODULE_ORDER[String(modul || "").toUpperCase()] ?? 3;
+
 /** Nama kelompok menu dalam bahasa yang mudah dipahami */
 const SUB_MODULE_LABELS: Record<string, string> = {
   MASTER: "Master",
@@ -375,6 +386,7 @@ const buildMenuStructure = computed(() => {
     // Only add SETUP module if it has items to show
     if (setupItems.length > 0) {
       result.push({
+        modul: "SETUP",
         title: moduleLabel("SETUP"),
         url: "#",
         icon: getModuleIcon("SETUP"),
@@ -432,6 +444,7 @@ const buildMenuStructure = computed(() => {
     });
 
     result.push({
+      modul: modulName,
       title: moduleLabel(modulName),
       url: "#",
       icon: getModuleIcon(modulName),
@@ -443,7 +456,12 @@ const buildMenuStructure = computed(() => {
     });
   });
 
-  return result;
+  // Urutan modul tidak bergantung pada data/seq DB: POS selalu paling bawah.
+  return result.sort(
+    (a, b) =>
+      moduleOrderRank(a.modul) - moduleOrderRank(b.modul) ||
+      a.title.localeCompare(b.title),
+  );
 });
 
 // All menu items for search
