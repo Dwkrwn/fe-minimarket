@@ -32,7 +32,7 @@
           <RefreshCw :class="['w-4 h-4', loading ? 'animate-spin' : '']" />
           <span>Refresh</span>
         </Button>
-        <Button
+        <!-- <Button
           v-if="canManage"
           size="sm"
           class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm"
@@ -41,7 +41,7 @@
         >
           <Plus class="w-4 h-4" />
           <span>Atur ROP Barang</span>
-        </Button>
+        </Button> -->
       </div>
     </div>
 
@@ -207,7 +207,7 @@
               <th class="px-4 py-3.5 text-center">Max</th>
               <th class="px-4 py-3.5 text-center">Auto-PR</th>
               <th class="px-4 py-3.5 text-center">Status</th>
-              <th v-if="canManage" class="px-4 py-3.5 text-center">Aksi</th>
+              <!-- <th v-if="canManage" class="px-4 py-3.5 text-center">Aksi</th> -->
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -318,7 +318,7 @@
                   {{ stockStatus(setting).label }}
                 </Badge>
               </td>
-              <td v-if="canManage" class="px-4 py-3.5 text-center">
+              <!-- <td v-if="canManage" class="px-4 py-3.5 text-center">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -328,7 +328,7 @@
                 >
                   <Edit class="w-4 h-4" />
                 </Button>
-              </td>
+              </td> -->
             </tr>
           </tbody>
         </table>
