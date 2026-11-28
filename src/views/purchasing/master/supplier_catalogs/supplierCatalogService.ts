@@ -8,12 +8,15 @@ export interface CatalogItem {
   nama_barang: string;
   harga_modal: number | string;
   uom?: { satuan_beli: string; rasio_konversi: number } | null;
+  category_rack?: { kode: string; nama: string } | null;
 }
 
 export interface CatalogSupplier {
   id: string;
   kode_supplier: string;
   nama_supplier: string;
+  kontak_sales?: string | null;
+  no_telp?: string | null;
   no_wa?: string | null;
   term_of_payment?: number;
 }
@@ -56,6 +59,21 @@ export async function getSupplierCatalogs(query: SupplierCatalogQuery = {}): Pro
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const res = await apiCall<ApiResponse<SupplierCatalog[]>>(`${BASE_PATH}${suffix}`, { method: "GET" });
   return res.data || [];
+}
+
+export async function getSupplierCatalogById(id: string): Promise<SupplierCatalog> {
+  const res = await apiCall<ApiResponse<SupplierCatalog>>(`${BASE_PATH}/${id}`, {
+    method: "GET",
+  });
+  return res.data;
+}
+
+export async function updateSupplierCatalog(id: string, payload: { harga_modal: number; is_active?: boolean }): Promise<SupplierCatalog> {
+  const res = await apiCall<ApiResponse<SupplierCatalog>>(`${BASE_PATH}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  return res.data;
 }
 
 export async function saveSupplierCatalog(payload: SupplierCatalogPayload): Promise<SupplierCatalog> {

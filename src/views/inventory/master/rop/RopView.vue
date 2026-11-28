@@ -32,16 +32,16 @@
           <RefreshCw :class="['w-4 h-4', loading ? 'animate-spin' : '']" />
           <span>Refresh</span>
         </Button>
-        <!-- <Button
+        <Button
           v-if="canManage"
           size="sm"
           class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm"
-          :disabled="availableItems.length === 0"
+          :disabled="loading || allItems.length === 0"
           @click="openAttachModal"
         >
           <Plus class="w-4 h-4" />
           <span>Atur ROP Barang</span>
-        </Button> -->
+        </Button>
       </div>
     </div>
 
@@ -342,7 +342,7 @@
       :description="
         isEditMode
           ? 'Perbarui parameter batas pemesanan barang.'
-          : 'Pilih barang yang belum memiliki pengaturan ROP.'
+          : 'Pilih barang untuk mengatur atau memperbarui batas pemesanan ROP.'
       "
     >
       <form @submit.prevent="handleSubmitForm" class="space-y-4">
@@ -360,7 +360,7 @@
           >
             <option value="" disabled>Pilih barang...</option>
             <option
-              v-for="item in availableItems"
+              v-for="item in activeItems"
               :key="item.id"
               :value="item.id"
             >
@@ -368,10 +368,10 @@
             </option>
           </select>
           <p
-            v-if="availableItems.length === 0"
+            v-if="activeItems.length === 0"
             class="text-xs text-amber-600 dark:text-amber-400 mt-1"
           >
-            Semua barang aktif sudah memiliki pengaturan ROP.
+            Belum ada barang aktif. Tambahkan barang di master barang terlebih dahulu.
           </p>
         </div>
 
@@ -501,7 +501,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import {
   Edit,
   Info,
@@ -556,9 +556,33 @@ const formData = ref({
   is_auto_pr: true,
 });
 
-const availableItems = computed(() =>
-  allItems.value.filter((item) => item.is_active && !item.rop_setting),
+const activeItems = computed(() =>
+  allItems.value.filter((item) => item.is_active),
 );
+
+watch(selectedItemId, (newId) => {
+  if (!newId) return;
+  const existing = ropSettings.value.find(
+    (s) => s.item_id === newId || s.item?.id === newId,
+  );
+  if (existing) {
+    activeSetting.value = existing;
+    formData.value = {
+      lead_time_days: Number(existing.lead_time_days) || 3,
+      safety_stock_pcs: Number(existing.safety_stock_pcs) || 10,
+      max_stock_pcs: Number(existing.max_stock_pcs) || 100,
+      is_auto_pr: Boolean(existing.is_auto_pr),
+    };
+  } else {
+    activeSetting.value = null;
+    formData.value = {
+      lead_time_days: 3,
+      safety_stock_pcs: 10,
+      max_stock_pcs: 100,
+      is_auto_pr: true,
+    };
+  }
+});
 
 const belowRopCount = computed(
   () =>

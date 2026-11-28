@@ -46,6 +46,11 @@ interface ApiResponse<T> {
   data: T;
 }
 
+export async function getNextSupplierCode(): Promise<string> {
+  const res = await apiCall<ApiResponse<{ kode: string }>>(`${BASE_PATH}/next-code`, { method: "GET" });
+  return res.data?.kode || "SUP-001";
+}
+
 export async function getSuppliers(query: SupplierQuery = {}): Promise<Supplier[]> {
   const params = new URLSearchParams();
   if (query.search?.trim()) params.append("search", query.search.trim());

@@ -22,7 +22,7 @@
           v-if="canManage"
           size="sm"
           class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm"
-          @click="openUpsertDialog()"
+          @click="router.push('/purchasing/master/supplier-catalogs/form')"
         >
           <Plus class="w-4 h-4" />
           <span>Tambah Harga</span>
@@ -177,12 +177,21 @@
               <td class="px-4 py-3.5 text-center">
                 <div class="flex items-center justify-center gap-1">
                   <Button
+                    variant="ghost"
+                    size="sm"
+                    class="h-8 w-8 p-0 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    title="Lihat detail harga"
+                    @click="router.push(`/purchasing/master/supplier-catalogs/view/${catalog.id}`)"
+                  >
+                    <Eye class="w-4 h-4" />
+                  </Button>
+                  <Button
                     v-if="canManage"
                     variant="ghost"
                     size="sm"
                     class="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                     title="Ubah harga"
-                    @click="openUpsertDialog(catalog)"
+                    @click="router.push(`/purchasing/master/supplier-catalogs/form/${catalog.id}`)"
                   >
                     <Edit class="w-4 h-4" />
                   </Button>
@@ -196,7 +205,6 @@
                   >
                     <Trash2 class="w-4 h-4" />
                   </Button>
-                  <span v-if="!canManage" class="text-xs text-slate-400">Read only</span>
                 </div>
               </td>
             </tr>
@@ -204,75 +212,6 @@
         </table>
       </div>
     </Card>
-
-    <!-- Dialog tambah / ubah harga -->
-    <GlobalDialog
-      v-model:open="isUpsertDialogOpen"
-      :title="editingId ? 'Ubah Harga Supplier' : 'Tambah Harga Supplier'"
-      description="Satu supplier hanya boleh punya satu harga per barang. Menyimpan kombinasi yang sama akan memperbarui harga lama."
-      type="info"
-      content-class="max-w-lg"
-    >
-      <form class="space-y-4" @submit.prevent="submitUpsert">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Supplier <span class="text-rose-500">*</span>
-          </label>
-          <select
-            v-model="form.supplier_id"
-            required
-            :disabled="!!editingId"
-            class="w-full h-9 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
-          >
-            <option value="" disabled>Pilih supplier</option>
-            <option v-for="supplier in activeSuppliers" :key="supplier.id" :value="supplier.id">
-              {{ supplier.nama_supplier }} ({{ supplier.kode_supplier }})
-            </option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Barang <span class="text-rose-500">*</span>
-          </label>
-          <select
-            v-model="form.item_id"
-            required
-            :disabled="!!editingId"
-            class="w-full h-9 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
-          >
-            <option value="" disabled>Pilih barang</option>
-            <option v-for="item in items" :key="item.id" :value="item.id">
-              {{ item.nama_barang }} - {{ item.barcode }}
-            </option>
-          </select>
-          <p v-if="items.length === 0" class="text-xs text-amber-600 dark:text-amber-400 mt-1">
-            Belum ada barang aktif. Tambahkan barang di Inventory terlebih dahulu.
-          </p>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Harga Beli / Pcs <span class="text-rose-500">*</span>
-          </label>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-slate-500">Rp</span>
-            <Input v-model.number="form.harga_modal" type="number" min="1" step="1" required placeholder="0" />
-          </div>
-          <p class="text-xs text-slate-500 mt-1">
-            Harga per Pcs (satuan dasar), bukan per kardus. Dipakai sebagai HPP saat membuat PO.
-          </p>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <Button type="button" variant="outline" @click="isUpsertDialogOpen = false">Batal</Button>
-          <Button type="submit" :disabled="isSaving" class="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5">
-            <RefreshCw v-if="isSaving" class="w-4 h-4 animate-spin" />
-            <span>{{ editingId ? 'Simpan Perubahan' : 'Simpan Harga' }}</span>
-          </Button>
-        </div>
-      </form>
-    </GlobalDialog>
 
     <!-- Dialog hapus -->
     <GlobalDialog
@@ -303,7 +242,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { BadgeCheck, Barcode, Edit, Package, Plus, RefreshCw, Search, Tags, Trash2, Truck } from "lucide-vue-next";
+import { useRouter } from "vue-router";
+import { BadgeCheck, Barcode, Edit, Eye, Package, Plus, RefreshCw, Search, Tags, Trash2, Truck } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -317,10 +257,10 @@ import { getSuppliers, type Supplier } from "../suppliers/supplierService";
 import {
   deleteSupplierCatalog,
   getSupplierCatalogs,
-  saveSupplierCatalog,
   type SupplierCatalog,
 } from "./supplierCatalogService";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const canManage = computed(() => authStore.isManager);
 
@@ -328,22 +268,13 @@ const catalogs = ref<SupplierCatalog[]>([]);
 const suppliers = ref<Supplier[]>([]);
 const items = ref<MinimarketItem[]>([]);
 const loading = ref(false);
-const isSaving = ref(false);
 const isDeleting = ref(false);
 
 const searchQuery = ref("");
 const supplierFilter = ref("");
 
-const isUpsertDialogOpen = ref(false);
 const isDeleteDialogOpen = ref(false);
-const editingId = ref("");
 const catalogToDelete = ref<SupplierCatalog | null>(null);
-
-const form = ref({
-  supplier_id: "",
-  item_id: "",
-  harga_modal: 0,
-});
 
 const activeSuppliers = computed(() => suppliers.value.filter((supplier) => supplier.is_active));
 const uniqueItemCount = computed(() => new Set(catalogs.value.map((row) => row.item_id)).size);
@@ -387,53 +318,6 @@ function resetFilter() {
   searchQuery.value = "";
   supplierFilter.value = "";
   load();
-}
-
-function openUpsertDialog(catalog?: SupplierCatalog) {
-  if (catalog) {
-    editingId.value = catalog.id;
-    form.value = {
-      supplier_id: catalog.supplier_id,
-      item_id: catalog.item_id,
-      harga_modal: Number(catalog.harga_modal) || 0,
-    };
-  } else {
-    editingId.value = "";
-    form.value = {
-      supplier_id: supplierFilter.value || "",
-      item_id: "",
-      harga_modal: 0,
-    };
-  }
-  isUpsertDialogOpen.value = true;
-}
-
-async function submitUpsert() {
-  if (!form.value.supplier_id || !form.value.item_id) {
-    toast.error("Supplier dan barang wajib dipilih");
-    return;
-  }
-  if (!form.value.harga_modal || Number(form.value.harga_modal) <= 0) {
-    toast.error("Harga beli harus lebih dari 0");
-    return;
-  }
-
-  isSaving.value = true;
-  try {
-    await saveSupplierCatalog({
-      supplier_id: form.value.supplier_id,
-      item_id: form.value.item_id,
-      harga_modal: Number(form.value.harga_modal),
-    });
-    toast.success(editingId.value ? "Harga supplier berhasil diperbarui" : "Harga supplier berhasil disimpan");
-    isUpsertDialogOpen.value = false;
-    await load();
-  } catch (error: any) {
-    console.error("Gagal menyimpan harga supplier:", error);
-    toast.error(error.message || "Gagal menyimpan harga supplier");
-  } finally {
-    isSaving.value = false;
-  }
 }
 
 function openDeleteDialog(catalog: SupplierCatalog) {

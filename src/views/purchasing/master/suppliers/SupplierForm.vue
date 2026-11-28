@@ -38,7 +38,15 @@
               <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Kode Supplier <span class="text-rose-500">*</span>
               </label>
-              <Input v-model="form.kode_supplier" placeholder="Contoh: SUP-001" required :disabled="readOnly" class="font-mono" />
+              <Input
+                v-model="form.kode_supplier"
+                placeholder="Auto (SUP-001)"
+                required
+                :disabled="readOnly"
+                :readonly="!isEdit"
+                class="font-mono bg-slate-50 dark:bg-slate-900/50"
+              />
+              <span v-if="!isEdit" class="text-[11px] text-slate-400 mt-0.5 block">Kode otomatis digenerate sistem</span>
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -151,7 +159,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createSupplier, getSupplierDetail, updateSupplier, type Supplier } from "./supplierService";
+import { createSupplier, getNextSupplierCode, getSupplierDetail, updateSupplier, type Supplier } from "./supplierService";
 
 const route = useRoute();
 const router = useRouter();
@@ -177,7 +185,14 @@ const form = ref({
 });
 
 async function load() {
-  if (!supplierId.value) return;
+  if (!supplierId.value) {
+    try {
+      form.value.kode_supplier = await getNextSupplierCode();
+    } catch (e) {
+      console.error("Gagal mendapatkan kode supplier otomatis:", e);
+    }
+    return;
+  }
   loading.value = true;
   try {
     const data = await getSupplierDetail(supplierId.value);

@@ -24,7 +24,19 @@
             <CardDescription>Pilih PO yang masih memiliki sisa barang belum diterima.</CardDescription>
           </CardHeader>
           <CardContent class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  No. Penerimaan (No. GR) <span class="text-rose-500">*</span>
+                </label>
+                <Input
+                  v-model="form.no_gr"
+                  placeholder="Auto (GR-001)"
+                  readonly
+                  class="font-mono bg-slate-50 dark:bg-slate-900/50"
+                />
+                <span class="text-[11px] text-slate-400 mt-0.5 block">Nomor otomatis sistem</span>
+              </div>
               <div>
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Purchase Order <span class="text-rose-500">*</span>
@@ -212,7 +224,7 @@ import {
   getPurchaseOrders,
   type PurchaseOrder,
 } from "../../order/purchase_orders/purchaseOrderService";
-import { createGoodsReceipt } from "./goodsReceiptService";
+import { createGoodsReceipt, getNextGoodsReceiptNumber } from "./goodsReceiptService";
 
 interface ReceiptLine {
   item_id: string;
@@ -236,6 +248,7 @@ const loadingPo = ref(false);
 const isSubmitting = ref(false);
 
 const form = ref({
+  no_gr: "",
   po_id: "",
   no_surat_jalan: "",
   catatan: "",
@@ -370,6 +383,7 @@ async function handleSubmit() {
   isSubmitting.value = true;
   try {
     const receipt = await createGoodsReceipt({
+      no_gr: form.value.no_gr.trim() || undefined,
       po_id: form.value.po_id,
       no_surat_jalan: form.value.no_surat_jalan.trim() || null,
       catatan: form.value.catatan.trim() || null,
@@ -391,6 +405,11 @@ async function handleSubmit() {
 }
 
 onMounted(async () => {
+  try {
+    form.value.no_gr = await getNextGoodsReceiptNumber();
+  } catch (e) {
+    console.error("Gagal memuat nomor GR otomatis:", e);
+  }
   await loadOrders();
   const queryPo = String(route.query.po || "");
   if (queryPo && openOrders.value.some((order) => order.id === queryPo)) {

@@ -43,6 +43,7 @@ export interface GoodsReceipt {
 }
 
 export interface CreateGoodsReceiptPayload {
+  no_gr?: string | null;
   po_id: string;
   no_surat_jalan?: string | null;
   catatan?: string | null;
@@ -66,6 +67,11 @@ interface ApiResponse<T> {
   status: string;
   message?: string;
   data: T;
+}
+
+export async function getNextGoodsReceiptNumber(): Promise<string> {
+  const res = await apiCall<ApiResponse<{ no_gr: string }>>(`${BASE_PATH}/next-number`, { method: "GET" });
+  return res.data?.no_gr || "GR-001";
 }
 
 export async function getGoodsReceipts(query: GoodsReceiptQuery = {}): Promise<GoodsReceipt[]> {

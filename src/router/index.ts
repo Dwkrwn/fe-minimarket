@@ -134,6 +134,27 @@ const router = createRouter({
           },
         },
         {
+          path: "/purchasing/master/supplier-catalogs/form/:id?",
+          name: "PurchasingSupplierCatalogForm",
+          component: () =>
+            import("@/views/purchasing/master/supplier_catalogs/SupplierCatalogForm.vue"),
+          meta: {
+            title: "Form Harga Supplier",
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/purchasing/master/supplier-catalogs/view/:id",
+          name: "PurchasingSupplierCatalogView",
+          component: () =>
+            import("@/views/purchasing/master/supplier_catalogs/SupplierCatalogForm.vue"),
+          meta: {
+            title: "Detail Harga Supplier",
+            requiresAuth: true,
+            readOnly: true,
+          },
+        },
+        {
           path: "/purchasing/master/supplier_catalogs",
           name: "PurchasingSupplierCatalogsUnderscore",
           redirect: { name: "PurchasingSupplierCatalogs" },
